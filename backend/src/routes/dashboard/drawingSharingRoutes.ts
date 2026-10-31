@@ -1,3 +1,4 @@
+import { WORKSPACE_USER_ID } from "../../middleware/workspace";
 import express from "express";
 import {
   buildShareLinkToken,
@@ -12,7 +13,6 @@ export const registerDrawingSharingRoutes = (
 ) => {
   const {
     prisma,
-    workspace,
     asyncHandler,
     config,
     logAuditEvent,
@@ -22,10 +22,9 @@ export const registerDrawingSharingRoutes = (
 
   app.get(
     "/drawings/:id/sharing",
-    workspace,
     asyncHandler(async (req, res) => {
       const drawing = await prisma.drawing.findFirst({
-        where: { id: req.params.id, userId: req.user!.id },
+        where: { id: req.params.id, userId: WORKSPACE_USER_ID },
         select: { id: true },
       });
       if (!drawing) return res.status(404).json({ error: "Drawing not found" });
@@ -48,16 +47,14 @@ export const registerDrawingSharingRoutes = (
 
   app.post(
     "/drawings/:id/link-shares",
-    workspace,
     asyncHandler(async (req, res) => {
-      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
       const { id } = req.params;
 
       const drawing = await prisma.drawing.findUnique({
         where: { id },
         select: { userId: true },
       });
-      if (!drawing || drawing.userId !== req.user.id) {
+      if (!drawing || drawing.userId !== WORKSPACE_USER_ID) {
         return res.status(404).json({ error: "Drawing not found" });
       }
 
@@ -141,7 +138,7 @@ export const registerDrawingSharingRoutes = (
           tokenHash,
           passphraseHash: passphraseHashValue,
           expiresAt,
-          createdByUserId: req.user.id,
+          createdByUserId: WORKSPACE_USER_ID,
         },
         select: {
           id: true,
@@ -154,7 +151,7 @@ export const registerDrawingSharingRoutes = (
 
       if (config.enableAuditLogging) {
         await logAuditEvent({
-          userId: req.user.id,
+          userId: WORKSPACE_USER_ID,
           action: "drawing_link_share_created",
           resource: `drawing:${id}`,
           ipAddress: req.ip || req.connection.remoteAddress || undefined,
@@ -173,16 +170,14 @@ export const registerDrawingSharingRoutes = (
 
   app.delete(
     "/drawings/:id/link-shares/:shareId",
-    workspace,
     asyncHandler(async (req, res) => {
-      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
       const { id, shareId } = req.params;
 
       const drawing = await prisma.drawing.findUnique({
         where: { id },
         select: { userId: true },
       });
-      if (!drawing || drawing.userId !== req.user.id) {
+      if (!drawing || drawing.userId !== WORKSPACE_USER_ID) {
         return res.status(404).json({ error: "Drawing not found" });
       }
 
@@ -193,7 +188,7 @@ export const registerDrawingSharingRoutes = (
 
       if (config.enableAuditLogging) {
         await logAuditEvent({
-          userId: req.user.id,
+          userId: WORKSPACE_USER_ID,
           action: "drawing_link_share_revoked",
           resource: `drawing:${id}`,
           ipAddress: req.ip || req.connection.remoteAddress || undefined,

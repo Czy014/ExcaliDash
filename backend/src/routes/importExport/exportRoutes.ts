@@ -1,3 +1,4 @@
+import { WORKSPACE_USER_ID } from "../../middleware/workspace";
 import archiver from "archiver";
 import { Prisma } from "../../generated/client";
 import {
@@ -14,21 +15,12 @@ import { embedDrawingFilesForExport } from "./exportFiles";
 export const registerExcalidashExportRoute = (
   deps: RegisterImportExportDeps,
 ) => {
-  const {
-    app,
-    prisma,
-    workspace,
-    asyncHandler,
-    getBackendVersion,
-    parseJsonField,
-  } = deps;
+  const { app, prisma, asyncHandler, getBackendVersion, parseJsonField } = deps;
 
   app.get(
     "/export/excalidash",
-    workspace,
     asyncHandler(async (req, res) => {
-      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-      const trashCollectionId = getUserTrashCollectionId(req.user.id);
+      const trashCollectionId = getUserTrashCollectionId(WORKSPACE_USER_ID);
 
       const extParam =
         typeof req.query.ext === "string" ? req.query.ext.toLowerCase() : "";
@@ -40,11 +32,11 @@ export const registerExcalidashExportRoute = (
 
       const exportedAt = new Date().toISOString();
       const drawings = await prisma.drawing.findMany({
-        where: { userId: req.user.id },
+        where: { userId: WORKSPACE_USER_ID },
         include: { collection: true },
       });
       const userCollections = await prisma.collection.findMany({
-        where: { userId: req.user.id },
+        where: { userId: WORKSPACE_USER_ID },
       });
 
       const hasInternalTrashCollection = userCollections.some(
@@ -55,18 +47,18 @@ export const registerExcalidashExportRoute = (
           !(hasInternalTrashCollection && collection.id === "trash"),
       );
       const hasTrashDrawings = drawings.some((drawing) =>
-        isTrashCollectionId(drawing.collectionId, req.user!.id),
+        isTrashCollectionId(drawing.collectionId, WORKSPACE_USER_ID),
       );
       const collectionsToExport = [...normalizedUserCollections];
       if (
         hasTrashDrawings &&
         !collectionsToExport.some((collection) =>
-          isTrashCollectionId(collection.id, req.user!.id),
+          isTrashCollectionId(collection.id, WORKSPACE_USER_ID),
         )
       ) {
         const trash = await prisma.collection.findFirst({
           where: {
-            userId: req.user.id,
+            userId: WORKSPACE_USER_ID,
             id: { in: [trashCollectionId, "trash"] },
           },
         });
@@ -100,7 +92,7 @@ export const registerExcalidashExportRoute = (
             filePath: `${folder}/${fileName}`,
             collectionId: toPublicTrashCollectionId(
               drawing.collectionId,
-              req.user!.id,
+              WORKSPACE_USER_ID,
             ),
             version: drawing.version,
             createdAt: drawing.createdAt.toISOString(),
@@ -112,9 +104,9 @@ export const registerExcalidashExportRoute = (
       const manifestCollections = collectionsToExport
         .map((collection) => ({
           id:
-            toPublicTrashCollectionId(collection.id, req.user!.id) ||
+            toPublicTrashCollectionId(collection.id, WORKSPACE_USER_ID) ||
             collection.id,
-          name: isTrashCollectionId(collection.id, req.user!.id)
+          name: isTrashCollectionId(collection.id, WORKSPACE_USER_ID)
             ? "Trash"
             : collection.name,
           folder:
@@ -133,7 +125,7 @@ export const registerExcalidashExportRoute = (
         formatVersion: 1 as const,
         exportedAt,
         excalidashBackendVersion: getBackendVersion(),
-        userId: req.user.id,
+        userId: WORKSPACE_USER_ID,
         unorganizedFolder,
         collections: manifestCollections,
         drawings: drawingsManifest,

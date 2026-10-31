@@ -1,3 +1,4 @@
+import { WORKSPACE_USER_ID } from "../../middleware/workspace";
 import express from "express";
 import { DashboardRouteDeps } from "./types";
 import { getUserTrashCollectionId, isTrashCollectionId } from "./trash";
@@ -8,7 +9,6 @@ export const registerCollectionRoutes = (
 ) => {
   const {
     prisma,
-    workspace,
     asyncHandler,
     collectionNameSchema,
     sanitizeText,
@@ -21,14 +21,12 @@ export const registerCollectionRoutes = (
   // GET /collections — workspace collections
   app.get(
     "/collections",
-    workspace,
     asyncHandler(async (req, res) => {
-      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-      const trashCollectionId = getUserTrashCollectionId(req.user.id);
-      await ensureTrashCollection(prisma, req.user.id);
+      const trashCollectionId = getUserTrashCollectionId(WORKSPACE_USER_ID);
+      await ensureTrashCollection(prisma, WORKSPACE_USER_ID);
 
       const rawCollections = await prisma.collection.findMany({
-        where: { userId: req.user.id },
+        where: { userId: WORKSPACE_USER_ID },
         orderBy: { createdAt: "desc" },
       });
       const hasInternalTrash = rawCollections.some(
@@ -49,10 +47,7 @@ export const registerCollectionRoutes = (
   // POST /collections
   app.post(
     "/collections",
-    workspace,
     asyncHandler(async (req, res) => {
-      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-
       const parsed = collectionNameSchema.safeParse(req.body.name);
       if (!parsed.success) {
         return res.status(400).json({
@@ -63,7 +58,7 @@ export const registerCollectionRoutes = (
 
       const sanitizedName = sanitizeText(parsed.data, 100);
       const newCollection = await prisma.collection.create({
-        data: { name: sanitizedName, userId: req.user.id },
+        data: { name: sanitizedName, userId: WORKSPACE_USER_ID },
       });
       return res.json(newCollection);
     }),
@@ -72,19 +67,16 @@ export const registerCollectionRoutes = (
   // PUT /collections/:id — owner only
   app.put(
     "/collections/:id",
-    workspace,
     asyncHandler(async (req, res) => {
-      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-
       const { id } = req.params;
-      if (isTrashCollectionId(id, req.user.id)) {
+      if (isTrashCollectionId(id, WORKSPACE_USER_ID)) {
         return res.status(400).json({
           error: "Validation error",
           message: "Trash collection cannot be renamed",
         });
       }
       const existing = await prisma.collection.findFirst({
-        where: { id, userId: req.user.id },
+        where: { id, userId: WORKSPACE_USER_ID },
       });
       if (!existing)
         return res.status(404).json({ error: "Collection not found" });
@@ -99,11 +91,11 @@ export const registerCollectionRoutes = (
 
       const sanitizedName = sanitizeText(parsed.data, 100);
       await prisma.collection.updateMany({
-        where: { id, userId: req.user.id },
+        where: { id, userId: WORKSPACE_USER_ID },
         data: { name: sanitizedName },
       });
       const updated = await prisma.collection.findFirst({
-        where: { id, userId: req.user.id },
+        where: { id, userId: WORKSPACE_USER_ID },
       });
       if (!updated)
         return res.status(404).json({ error: "Collection not found" });
@@ -114,36 +106,35 @@ export const registerCollectionRoutes = (
   // DELETE /collections/:id — owner only
   app.delete(
     "/collections/:id",
-    workspace,
     asyncHandler(async (req, res) => {
-      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-
       const { id } = req.params;
-      if (isTrashCollectionId(id, req.user.id)) {
+      if (isTrashCollectionId(id, WORKSPACE_USER_ID)) {
         return res.status(400).json({
           error: "Validation error",
           message: "Trash collection cannot be deleted",
         });
       }
       const collection = await prisma.collection.findFirst({
-        where: { id, userId: req.user.id },
+        where: { id, userId: WORKSPACE_USER_ID },
       });
       if (!collection)
         return res.status(404).json({ error: "Collection not found" });
 
       await prisma.$transaction([
         prisma.drawing.updateMany({
-          where: { collectionId: id, userId: req.user.id },
+          where: { collectionId: id, userId: WORKSPACE_USER_ID },
           data: { collectionId: null },
         }),
         prisma.collectionShare.deleteMany({ where: { collectionId: id } }),
-        prisma.collection.deleteMany({ where: { id, userId: req.user.id } }),
+        prisma.collection.deleteMany({
+          where: { id, userId: WORKSPACE_USER_ID },
+        }),
       ]);
       invalidateDrawingsCache();
 
       if (config.enableAuditLogging) {
         await logAuditEvent({
-          userId: req.user.id,
+          userId: WORKSPACE_USER_ID,
           action: "collection_deleted",
           resource: `collection:${id}`,
           ipAddress: req.ip || req.connection.remoteAddress || undefined,

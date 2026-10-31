@@ -1,3 +1,4 @@
+import { WORKSPACE_USER_ID } from "../../middleware/workspace";
 import express from "express";
 import { v4 as uuidv4 } from "uuid";
 import { rewritePreviewForInternedFiles } from "../../fileProcessing";
@@ -14,7 +15,6 @@ export const registerDrawingDeleteDuplicateRoutes = (
 ) => {
   const {
     prisma,
-    workspace,
     asyncHandler,
     ensureTrashCollection,
     invalidateDrawingsCache,
@@ -26,13 +26,11 @@ export const registerDrawingDeleteDuplicateRoutes = (
   } = context;
   app.delete(
     "/drawings/:id",
-    workspace,
     asyncHandler(async (req, res) => {
-      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
       const { id } = req.params;
 
       const drawing = await prisma.drawing.findFirst({
-        where: { id, userId: req.user.id },
+        where: { id, userId: WORKSPACE_USER_ID },
       });
       if (!drawing) return res.status(404).json({ error: "Drawing not found" });
 
@@ -43,7 +41,7 @@ export const registerDrawingDeleteDuplicateRoutes = (
       // storage leak). Doing S3 first means a failure aborts before the row
       // is removed, so the user can simply retry the delete.
       try {
-        await cleanupS3FilesForDrawing(id, req.user.id);
+        await cleanupS3FilesForDrawing(id, WORKSPACE_USER_ID);
       } catch (error) {
         console.warn("[s3] Failed to cleanup deleted drawing files", {
           drawingId: id,
@@ -52,7 +50,7 @@ export const registerDrawingDeleteDuplicateRoutes = (
       }
 
       const deleteResult = await prisma.drawing.deleteMany({
-        where: { id, userId: req.user.id },
+        where: { id, userId: WORKSPACE_USER_ID },
       });
       if (deleteResult.count === 0) {
         return res.status(404).json({ error: "Drawing not found" });
@@ -61,7 +59,7 @@ export const registerDrawingDeleteDuplicateRoutes = (
 
       if (config.enableAuditLogging) {
         await logAuditEvent({
-          userId: req.user.id,
+          userId: WORKSPACE_USER_ID,
           action: "drawing_deleted",
           resource: `drawing:${id}`,
           ipAddress: req.ip || req.connection.remoteAddress || undefined,
@@ -76,20 +74,17 @@ export const registerDrawingDeleteDuplicateRoutes = (
 
   app.post(
     "/drawings/:id/duplicate",
-    workspace,
     asyncHandler(async (req, res) => {
-      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-
       const { id } = req.params;
       const original = await prisma.drawing.findFirst({
-        where: { id, userId: req.user.id },
+        where: { id, userId: WORKSPACE_USER_ID },
       });
       if (!original)
         return res.status(404).json({ error: "Original drawing not found" });
       let duplicatedCollectionId = original.collectionId;
-      if (isTrashCollectionId(original.collectionId, req.user.id)) {
-        await ensureTrashCollection(prisma, req.user.id);
-        duplicatedCollectionId = getUserTrashCollectionId(req.user.id);
+      if (isTrashCollectionId(original.collectionId, WORKSPACE_USER_ID)) {
+        await ensureTrashCollection(prisma, WORKSPACE_USER_ID);
+        duplicatedCollectionId = getUserTrashCollectionId(WORKSPACE_USER_ID);
       }
 
       const newDrawingId = uuidv4();
@@ -100,7 +95,7 @@ export const registerDrawingDeleteDuplicateRoutes = (
       const duplicatedFiles = await cloneS3FileReferences(
         original.id,
         newDrawingId,
-        req.user.id,
+        WORKSPACE_USER_ID,
         originalFiles,
       );
       const duplicatedPreview = rewritePreviewForInternedFiles(
@@ -120,7 +115,7 @@ export const registerDrawingDeleteDuplicateRoutes = (
             typeof duplicatedPreview === "string"
               ? duplicatedPreview
               : original.preview,
-          userId: req.user.id,
+          userId: WORKSPACE_USER_ID,
           collectionId: duplicatedCollectionId,
           version: 1,
         },
@@ -131,7 +126,7 @@ export const registerDrawingDeleteDuplicateRoutes = (
         ...newDrawing,
         collectionId: toPublicTrashCollectionId(
           newDrawing.collectionId,
-          req.user.id,
+          WORKSPACE_USER_ID,
         ),
         elements: parseJsonField(newDrawing.elements, []),
         appState: parseJsonField(newDrawing.appState, {}),

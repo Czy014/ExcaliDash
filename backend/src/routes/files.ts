@@ -35,7 +35,6 @@ const isValidIdSegment = (value: unknown): value is string =>
 
 export type FileRouteDeps = {
   prisma: PrismaClient;
-  workspace: express.RequestHandler;
   asyncHandler: <T = void>(
     fn: (
       req: express.Request,
@@ -49,7 +48,7 @@ export const registerFileRoutes = (
   app: express.Express,
   deps: FileRouteDeps,
 ): void => {
-  const { prisma, workspace, asyncHandler } = deps;
+  const { prisma, asyncHandler } = deps;
 
   // Raw body parser mounted ONLY on the upload route. The global
   // express.json parser ignores non-JSON content types, so the raw image
@@ -91,7 +90,6 @@ export const registerFileRoutes = (
   // ------------------------------------------------------------------
   app.get(
     "/files/config",
-    workspace,
     asyncHandler(async (_req, res) => {
       return res.json({ s3Enabled: isS3Enabled() });
     }),
@@ -104,13 +102,9 @@ export const registerFileRoutes = (
   // ------------------------------------------------------------------
   app.put(
     "/drawings/:drawingId/files/:fileId",
-    workspace,
     rawUpload,
     handleUploadPayloadError,
     asyncHandler(async (req, res) => {
-      const userId = req.user?.id;
-      if (!userId) return res.status(401).json({ error: "Unauthorized" });
-
       const { drawingId, fileId } = req.params;
       if (!isValidIdSegment(drawingId) || !isValidIdSegment(fileId)) {
         return res.status(400).json({ error: "Invalid id segment" });
@@ -118,7 +112,6 @@ export const registerFileRoutes = (
 
       const access = await getDrawingAccess({
         prisma,
-        principal: { kind: "user", userId },
         drawingId,
       });
       if (!canEditDrawing(access)) {
@@ -214,7 +207,6 @@ export const registerFileRoutes = (
   // ------------------------------------------------------------------
   app.get(
     "/files/:drawingId/:fileId",
-    workspace,
     asyncHandler(async (req, res) => {
       const { drawingId, fileId } = req.params;
       if (!isValidIdSegment(drawingId) || !isValidIdSegment(fileId)) {
@@ -225,7 +217,6 @@ export const registerFileRoutes = (
       // miss so we don't leak existence of a (drawing, fileId) pair.
       const access = await getDrawingAccess({
         prisma,
-        principal: req.user?.id ? { kind: "user", userId: req.user.id } : null,
         drawingId,
       });
       if (!canViewDrawing(access)) {

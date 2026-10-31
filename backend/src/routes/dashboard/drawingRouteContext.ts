@@ -1,4 +1,3 @@
-import express from "express";
 import { DashboardRouteDeps } from "./types";
 import {
   buildS3Key,
@@ -10,13 +9,9 @@ import {
   isS3Enabled,
   listS3Objects,
 } from "../../s3";
-import { type DrawingPrincipal } from "../../authz/sharing";
 import { config } from "../../config";
 
 export type DrawingRouteContext = DashboardRouteDeps & {
-  getRequestPrincipal: (
-    req: express.Request,
-  ) => Promise<DrawingPrincipal | null>;
   resolveDefaultTtlMs: (permission: "view" | "edit") => number;
   resolveMaxTtlMs: () => number;
   cleanupS3FilesForDrawing: (
@@ -35,13 +30,6 @@ export const createDrawingRouteContext = (
   deps: DashboardRouteDeps,
 ): DrawingRouteContext => {
   const { prisma } = deps;
-
-  const getRequestPrincipal = async (
-    req: express.Request,
-  ): Promise<DrawingPrincipal | null> => {
-    if (req.user?.id) return { kind: "user", userId: req.user.id };
-    return null;
-  };
 
   const resolveDefaultTtlMs = (permission: "view" | "edit"): number =>
     permission === "edit"
@@ -176,7 +164,6 @@ export const createDrawingRouteContext = (
 
   return {
     ...deps,
-    getRequestPrincipal,
     resolveDefaultTtlMs,
     resolveMaxTtlMs,
     cleanupS3FilesForDrawing,

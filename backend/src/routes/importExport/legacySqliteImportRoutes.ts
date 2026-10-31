@@ -1,3 +1,4 @@
+import { WORKSPACE_USER_ID } from "../../middleware/workspace";
 import { v4 as uuidv4 } from "uuid";
 import {
   RegisterImportExportDeps,
@@ -23,7 +24,6 @@ export const registerLegacySqliteImportRoutes = (
   const {
     app,
     prisma,
-    workspace,
     asyncHandler,
     upload,
     uploadDir,
@@ -39,10 +39,8 @@ export const registerLegacySqliteImportRoutes = (
   } = deps;
   app.post(
     "/import/sqlite/legacy/verify",
-    workspace,
     upload.single("db"),
     asyncHandler(async (req, res) => {
-      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
       if (!req.file) return res.status(400).json({ error: "No file uploaded" });
       let stagedPath: string;
       try {
@@ -169,10 +167,8 @@ export const registerLegacySqliteImportRoutes = (
   );
   app.post(
     "/import/sqlite/legacy",
-    workspace,
     upload.single("db"),
     asyncHandler(async (req, res) => {
-      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
       if (!req.file) return res.status(400).json({ error: "No file uploaded" });
       let stagedPath: string;
       try {
@@ -304,7 +300,7 @@ export const registerLegacySqliteImportRoutes = (
                 select: { userId: true },
               });
               finalId =
-                existing && existing.userId !== req.user!.id
+                existing && existing.userId !== WORKSPACE_USER_ID
                   ? uuidv4()
                   : d.importedId;
             }
@@ -333,7 +329,7 @@ export const registerLegacySqliteImportRoutes = (
                 const finalId = finalDrawingIdMap.get(i)!;
                 return internDrawingFiles(
                   files,
-                  req.user!.id,
+                  WORKSPACE_USER_ID,
                   finalId,
                   prisma,
                 ).then((processed) => ({ i, processed }));
@@ -344,11 +340,12 @@ export const registerLegacySqliteImportRoutes = (
             }
           }
           const result = await prisma.$transaction(async (tx) => {
-            const trashCollectionId = getUserTrashCollectionId(req.user!.id);
+            const trashCollectionId =
+              getUserTrashCollectionId(WORKSPACE_USER_ID);
             const hasTrash = importedDrawings.some(
               (d) => String(d.collectionId || "") === "trash",
             );
-            if (hasTrash) await ensureTrashCollection(tx, req.user!.id);
+            if (hasTrash) await ensureTrashCollection(tx, WORKSPACE_USER_ID);
             const collectionIdMap = new Map<string, string>();
             let collectionsCreated = 0;
             let collectionsUpdated = 0;
@@ -369,7 +366,7 @@ export const registerLegacySqliteImportRoutes = (
                   data: {
                     id: newId,
                     name: sanitizeText(name, 100) || "Collection",
-                    userId: req.user!.id,
+                    userId: WORKSPACE_USER_ID,
                   },
                 });
                 collectionIdMap.set(`__name:${name}`, newId);
@@ -384,14 +381,14 @@ export const registerLegacySqliteImportRoutes = (
                   data: {
                     id: importedId,
                     name: sanitizeText(name, 100) || "Collection",
-                    userId: req.user!.id,
+                    userId: WORKSPACE_USER_ID,
                   },
                 });
                 collectionIdMap.set(importedId, importedId);
                 collectionsCreated += 1;
                 continue;
               }
-              if (existing.userId === req.user!.id) {
+              if (existing.userId === WORKSPACE_USER_ID) {
                 await tx.collection.update({
                   where: { id: importedId },
                   data: { name: sanitizeText(name, 100) || "Collection" },
@@ -405,7 +402,7 @@ export const registerLegacySqliteImportRoutes = (
                 data: {
                   id: newId,
                   name: sanitizeText(name, 100) || "Collection",
-                  userId: req.user!.id,
+                  userId: WORKSPACE_USER_ID,
                 },
               });
               collectionIdMap.set(importedId, newId);
@@ -463,14 +460,14 @@ export const registerLegacySqliteImportRoutes = (
                     version: Number.isFinite(Number(d.versionRaw))
                       ? Number(d.versionRaw)
                       : 1,
-                    userId: req.user!.id,
+                    userId: WORKSPACE_USER_ID,
                     collectionId: resolvedCollectionId ?? null,
                   },
                 });
                 drawingsCreated += 1;
                 continue;
               }
-              if (existing.userId === req.user!.id) {
+              if (existing.userId === WORKSPACE_USER_ID) {
                 await replaceImportedDrawing(tx, existing, {
                   name: d.name,
                   elements: JSON.stringify(d.sanitized.elements),
@@ -501,7 +498,7 @@ export const registerLegacySqliteImportRoutes = (
                   version: Number.isFinite(Number(d.versionRaw))
                     ? Number(d.versionRaw)
                     : 1,
-                  userId: req.user!.id,
+                  userId: WORKSPACE_USER_ID,
                   collectionId: resolvedCollectionId ?? null,
                 },
               });

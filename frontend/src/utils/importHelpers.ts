@@ -30,7 +30,6 @@ export type LegacyExportDrawing = {
 type LegacyExportJson = {
   version?: string;
   exportedAt?: string;
-  userId?: string;
   drawings: LegacyExportDrawing[];
 };
 

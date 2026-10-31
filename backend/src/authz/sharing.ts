@@ -1,10 +1,9 @@
 import type { PrismaClient } from "../generated/client";
 import crypto from "crypto";
+import { WORKSPACE_USER_ID } from "../middleware/workspace";
 
 export type DrawingPermission = "view" | "edit";
 export type DrawingAccess = "none" | DrawingPermission | "owner";
-
-export type DrawingPrincipal = { kind: "user"; userId: string };
 
 export const normalizeDrawingPermission = (
   input: unknown,
@@ -21,7 +20,6 @@ export const hashShareLinkToken = (token: string): string =>
 
 export const getDrawingAccess = async (params: {
   prisma: PrismaClient;
-  principal: DrawingPrincipal | null;
   drawingId: string;
   now?: Date;
 }): Promise<DrawingAccess> => {
@@ -32,7 +30,7 @@ export const getDrawingAccess = async (params: {
     select: { userId: true },
   });
   if (!drawing) return "none";
-  if (params.principal?.userId === drawing.userId) return "owner";
+  if (drawing.userId === WORKSPACE_USER_ID) return "owner";
 
   // Active links grant access to historical drawings outside this workspace.
   const linkPolicy = await getActiveLinkShareAccess({

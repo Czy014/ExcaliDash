@@ -1,3 +1,4 @@
+import { WORKSPACE_USER_ID } from "../../middleware/workspace";
 import express from "express";
 import { canViewDrawing, getDrawingAccess } from "../../authz/sharing";
 import { toPublicTrashCollectionId } from "./trash";
@@ -7,23 +8,13 @@ export const registerDrawingReadRoutes = (
   app: express.Express,
   context: DrawingRouteContext,
 ) => {
-  const {
-    prisma,
-    workspace,
-    asyncHandler,
-    parseJsonField,
-    getRequestPrincipal,
-  } = context;
+  const { prisma, asyncHandler, parseJsonField } = context;
   app.get(
     "/drawings/:id",
-    workspace,
     asyncHandler(async (req, res) => {
-      const principal = await getRequestPrincipal(req);
-
       const { id } = req.params;
       const access = await getDrawingAccess({
         prisma,
-        principal,
         drawingId: id,
       });
       if (!canViewDrawing(access)) {
@@ -41,8 +32,7 @@ export const registerDrawingReadRoutes = (
         });
       }
 
-      const isOwner =
-        principal?.kind === "user" && principal.userId === drawing.userId;
+      const isOwner = drawing.userId === WORKSPACE_USER_ID;
       return res.json({
         ...drawing,
         // Collections (and trash mapping) are owner-scoped. For shared/public access, avoid leaking

@@ -45,7 +45,6 @@ import { internDrawingFiles as internDrawingFilesWithPrisma } from "./fileProces
 import { initS3, isS3Enabled, checkBucketReachable } from "./s3";
 import { startScheduledBackups } from "./backups/scheduler";
 import { runStorageDoctor } from "./server/storageDoctor";
-const workspace = createWorkspaceMiddleware(prisma);
 const backendRoot = path.resolve(__dirname, "../");
 const redactDatabaseUrl = (value: string | undefined): string => {
   if (!value) return "<unset>";
@@ -268,19 +267,18 @@ app.use(express.urlencoded({ extended: true, limit: BODY_LIMIT }));
 app.use((req, res, next) => {
   const requestId = req.headers["x-request-id"] || "unknown";
   const contentLength = req.headers["content-length"];
-  const userId = req.user?.id || "workspace";
   if (contentLength) {
     const sizeInMB = parseInt(contentLength, 10) / 1024 / 1024;
     if (sizeInMB > 10) {
       console.log(
         `[LARGE REQUEST] ${req.method} ${req.path} - ${sizeInMB.toFixed(
           2,
-        )}MB - User: ${userId} - RequestID: ${requestId}`,
+        )}MB - RequestID: ${requestId}`,
       );
     }
   }
   console.log(
-    `[REQUEST] ${req.method} ${req.path} - User: ${userId} - IP: ${req.ip} - RequestID: ${requestId}`,
+    `[REQUEST] ${req.method} ${req.path} - IP: ${req.ip} - RequestID: ${requestId}`,
   );
   next();
 });
@@ -490,9 +488,9 @@ app.get("/health", async (_req, res) => {
   }
 });
 registerSystemRoutes(app, { asyncHandler, getBackendVersion });
+app.use(createWorkspaceMiddleware(prisma));
 registerDashboardRoutes(app, {
   prisma,
-  workspace,
   asyncHandler,
   parseJsonField,
   sanitizeText,
@@ -512,10 +510,9 @@ registerDashboardRoutes(app, {
   internDrawingFiles: (files, userId, drawingId) =>
     internDrawingFilesWithPrisma(files, userId, drawingId, prisma),
 });
-registerFileRoutes(app, { prisma, workspace, asyncHandler });
+registerFileRoutes(app, { prisma, asyncHandler });
 registerStorageRoutes(app, {
   prisma,
-  workspace,
   asyncHandler,
   parseJsonField,
   invalidateDrawingsCache,
@@ -523,7 +520,6 @@ registerStorageRoutes(app, {
 registerImportExportRoutes({
   app,
   prisma,
-  workspace,
   asyncHandler,
   upload,
   uploadDir,
@@ -605,12 +601,10 @@ if (isMain) {
     });
     httpServer.listen(PORT, config.listenHost, async () => {
       await initializeUploadDir();
-      if (config.authMode === "disabled") {
-        const line = "!".repeat(72);
-        console.warn(
-          `\n${line}\n! AUTH_MODE=disabled: authentication is OFF. Every request runs as a\n! single shared local user and NO login is required. Do NOT expose this\n! instance to the public internet or any untrusted network.\n${line}\n`,
-        );
-      }
+      const line = "!".repeat(72);
+      console.warn(
+        `\n${line}\n! AUTH_MODE=disabled: authentication is OFF. Every request runs as a\n! single shared local user and NO login is required. Do NOT expose this\n! instance to the public internet or any untrusted network.\n${line}\n`,
+      );
       await runStorageDoctor({
         config,
         isS3Enabled,

@@ -1,6 +1,18 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import express from "express";
 import request from "supertest";
-import { WORKSPACE_USER_ID } from "../middleware/workspace";
+import {
+  createWorkspaceMiddleware,
+  WORKSPACE_USER_ID,
+} from "../middleware/workspace";
 import { cleanupTestDb, getTestPrisma, setupTestDb } from "./testUtils";
 
 describe("single-user workspace", () => {
@@ -37,6 +49,74 @@ describe("single-user workspace", () => {
     expect(await prisma.user.count({ where: { id: WORKSPACE_USER_ID } })).toBe(
       1,
     );
+  });
+
+  it("initializes once for concurrent and subsequent requests without changing existing workspace data", async () => {
+    await request(app).get("/drawings").expect(200);
+    await prisma.user.update({
+      where: { id: WORKSPACE_USER_ID },
+      data: { name: "Existing workspace" },
+    });
+    const upsert = vi.spyOn(prisma.user, "upsert");
+    const isolated = express();
+    isolated.use(createWorkspaceMiddleware(prisma));
+    isolated.get("/ready", (_req, res) => res.sendStatus(200));
+    try {
+      const responses = await Promise.all(
+        Array.from({ length: 3 }, () => request(isolated).get("/ready")),
+      );
+      expect(responses.map((response) => response.status)).toEqual([
+        200, 200, 200,
+      ]);
+      await request(isolated).get("/ready").expect(200);
+      expect(upsert).toHaveBeenCalledTimes(1);
+      expect(
+        (
+          await prisma.user.findUniqueOrThrow({
+            where: { id: WORKSPACE_USER_ID },
+          })
+        ).name,
+      ).toBe("Existing workspace");
+    } finally {
+      upsert.mockRestore();
+    }
+  });
+
+  it("retries workspace initialization after a database failure", async () => {
+    const upsert = vi
+      .spyOn(prisma.user, "upsert")
+      .mockRejectedValueOnce(new Error("Database temporarily unavailable"));
+    const isolated = express();
+    isolated.use(createWorkspaceMiddleware(prisma));
+    isolated.get("/ready", (_req, res) => res.sendStatus(200));
+    const onError: express.ErrorRequestHandler = (_error, _req, res, _next) => {
+      res.sendStatus(503);
+    };
+    isolated.use(onError);
+    try {
+      await request(isolated).get("/ready").expect(503);
+      await request(isolated).get("/ready").expect(200);
+      await request(isolated).get("/ready").expect(200);
+      expect(upsert).toHaveBeenCalledTimes(2);
+    } finally {
+      upsert.mockRestore();
+    }
+  });
+
+  it("invalidates cached list variants when a drawing is created", async () => {
+    const paths = ["/drawings?sortField=name", "/drawings?collectionId=null"];
+    for (const path of paths) {
+      await agent.get(path).expect(200);
+      await agent.get(path).expect("X-Cache", "HIT");
+    }
+    const created = await createDrawing();
+    expect(created.status).toBe(200);
+    for (const path of paths) {
+      const response = await agent.get(path).expect("X-Cache", "MISS");
+      expect(
+        response.body.drawings.map((drawing: { id: string }) => drawing.id),
+      ).toContain(created.body.id);
+    }
   });
 
   it("keeps the same owner, scene version checks and history without credentials", async () => {
@@ -144,6 +224,7 @@ describe("single-user workspace", () => {
       .get(`/drawings/${drawing.id}`)
       .set("Authorization", "Bearer obsolete")
       .set("Cookie", "excalidash-access-token=obsolete")
+      .set("x-test-user-id", historical.id)
       .expect(404);
     const list = await agent.get("/drawings");
     expect(list.body.totalCount).toBe(0);

@@ -52,7 +52,6 @@ interface Config {
   frontendUrl?: string;
   trustProxy: boolean | number;
   drawingsCacheTtlMs: number;
-  authMode: "disabled";
   rateLimitMaxRequests: number;
   rateLimitWindowMs: number;
   csrfMaxRequests: number;
@@ -156,7 +155,6 @@ export const config: Config = {
   frontendUrl: parseFrontendUrl(readRaw("FRONTEND_URL")),
   trustProxy: parseTrustProxy(),
   drawingsCacheTtlMs: parseDrawingsCacheTtlMs(),
-  authMode: "disabled",
   rateLimitMaxRequests: readNumber("RATE_LIMIT_MAX_REQUESTS", 1000),
   rateLimitWindowMs: readNumber("RATE_LIMIT_WINDOW_MS", 900000),
   csrfMaxRequests: readNumber("CSRF_MAX_REQUESTS", 60),

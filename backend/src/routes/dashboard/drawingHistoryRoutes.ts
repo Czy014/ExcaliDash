@@ -12,14 +12,8 @@ export const registerDrawingHistoryRoutes = (
   app: express.Express,
   context: DrawingRouteContext,
 ) => {
-  const {
-    prisma,
-    workspace,
-    asyncHandler,
-    parseJsonField,
-    invalidateDrawingsCache,
-    getRequestPrincipal,
-  } = context;
+  const { prisma, asyncHandler, parseJsonField, invalidateDrawingsCache } =
+    context;
   // ============================================================
   // Drawing Version History
   // ============================================================
@@ -27,13 +21,10 @@ export const registerDrawingHistoryRoutes = (
   // List snapshots (metadata only)
   app.get(
     "/drawings/:id/history",
-    workspace,
     asyncHandler(async (req, res) => {
-      const principal = await getRequestPrincipal(req);
       const { id } = req.params;
       const access = await getDrawingAccess({
         prisma,
-        principal,
         drawingId: id,
       });
       if (!canViewDrawing(access)) {
@@ -73,13 +64,10 @@ export const registerDrawingHistoryRoutes = (
   // Get full snapshot for preview
   app.get(
     "/drawings/:id/history/:snapshotId",
-    workspace,
     asyncHandler(async (req, res) => {
-      const principal = await getRequestPrincipal(req);
       const { id, snapshotId } = req.params;
       const access = await getDrawingAccess({
         prisma,
-        principal,
         drawingId: id,
       });
       if (!canViewDrawing(access)) {
@@ -104,13 +92,10 @@ export const registerDrawingHistoryRoutes = (
   // Restore a snapshot (snapshots current state first, then applies old state)
   app.post(
     "/drawings/:id/history/:snapshotId/restore",
-    workspace,
     asyncHandler(async (req, res) => {
-      const principal = await getRequestPrincipal(req);
       const { id, snapshotId } = req.params;
       const access = await getDrawingAccess({
         prisma,
-        principal,
         drawingId: id,
       });
       if (!canEditDrawing(access)) {

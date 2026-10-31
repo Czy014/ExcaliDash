@@ -49,7 +49,6 @@ export const excalidashManifestSchemaV1 = z.object({
 export type RegisterImportExportDeps = {
   app: express.Express;
   prisma: PrismaClient;
-  workspace: express.RequestHandler;
   asyncHandler: <T = void>(
     fn: (
       req: express.Request,

@@ -6,7 +6,6 @@ export type SortField = "name" | "createdAt" | "updatedAt";
 export type SortDirection = "asc" | "desc";
 
 type BuildDrawingsCacheKey = (keyParts: {
-  userId: string;
   searchTerm: string;
   collectionFilter: string;
   includeData: boolean;
@@ -30,7 +29,6 @@ type LogAuditEvent = (params: {
 
 export type DashboardRouteDeps = {
   prisma: PrismaClient;
-  workspace: express.RequestHandler;
   asyncHandler: <T = void>(
     fn: (
       req: express.Request,
@@ -49,14 +47,10 @@ export type DashboardRouteDeps = {
   ) => void;
   collectionNameSchema: z.ZodTypeAny;
   ensureTrashCollection: EnsureTrashCollection;
-  invalidateDrawingsCache: (userId?: string) => void;
+  invalidateDrawingsCache: () => void;
   buildDrawingsCacheKey: BuildDrawingsCacheKey;
   getCachedDrawingsBody: (key: string) => Buffer | null;
-  cacheDrawingsResponse: (
-    key: string,
-    payload: unknown,
-    userId?: string,
-  ) => Buffer;
+  cacheDrawingsResponse: (key: string, payload: unknown) => Buffer;
   MAX_PAGE_SIZE: number;
   config: {
     nodeEnv: string;

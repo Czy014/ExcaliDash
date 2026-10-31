@@ -1,3 +1,4 @@
+import { WORKSPACE_USER_ID } from "../../middleware/workspace";
 import { promises as fsPromises } from "fs";
 import path from "path";
 import JSZip from "jszip";
@@ -51,7 +52,6 @@ export const registerExcalidashImportRoutes = (
   const {
     app,
     prisma,
-    workspace,
     asyncHandler,
     upload,
     uploadDir,
@@ -69,10 +69,8 @@ export const registerExcalidashImportRoutes = (
   } = deps;
   app.post(
     "/import/excalidash/verify",
-    workspace,
     upload.single("archive"),
     asyncHandler(async (req, res) => {
-      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
       if (!req.file) return res.status(400).json({ error: "No file uploaded" });
       let stagedPath: string;
       try {
@@ -196,10 +194,8 @@ export const registerExcalidashImportRoutes = (
   );
   app.post(
     "/import/excalidash",
-    workspace,
     upload.single("archive"),
     asyncHandler(async (req, res) => {
-      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
       if (!req.file) return res.status(400).json({ error: "No file uploaded" });
       let stagedPath: string;
       try {
@@ -377,7 +373,7 @@ export const registerExcalidashImportRoutes = (
             select: { userId: true },
           });
           const finalId =
-            existing && existing.userId !== req.user!.id
+            existing && existing.userId !== WORKSPACE_USER_ID
               ? uuidv4()
               : prepared.id;
           finalDrawingIdMap.set(i, finalId);
@@ -405,7 +401,7 @@ export const registerExcalidashImportRoutes = (
               const finalId = finalDrawingIdMap.get(i)!;
               return internDrawingFiles(
                 files,
-                req.user!.id,
+                WORKSPACE_USER_ID,
                 finalId,
                 prisma,
               ).then((processed) => ({ i, processed }));
@@ -417,7 +413,8 @@ export const registerExcalidashImportRoutes = (
         }
         try {
           const result = await prisma.$transaction(async (tx) => {
-            const trashCollectionId = getUserTrashCollectionId(req.user!.id);
+            const trashCollectionId =
+              getUserTrashCollectionId(WORKSPACE_USER_ID);
             const collectionIdMap = new Map<string, string>();
             let collectionsCreated = 0;
             let collectionsUpdated = 0;
@@ -428,7 +425,7 @@ export const registerExcalidashImportRoutes = (
             const needsTrash =
               manifest.collections.some((c) => c.id === "trash") ||
               preparedDrawings.some((d) => d.collectionId === "trash");
-            if (needsTrash) await ensureTrashCollection(tx, req.user!.id);
+            if (needsTrash) await ensureTrashCollection(tx, WORKSPACE_USER_ID);
             for (const c of manifest.collections) {
               if (c.id === "trash") {
                 collectionIdMap.set("trash", trashCollectionId);
@@ -442,14 +439,14 @@ export const registerExcalidashImportRoutes = (
                   data: {
                     id: c.id,
                     name: sanitizeText(c.name, 100) || "Collection",
-                    userId: req.user!.id,
+                    userId: WORKSPACE_USER_ID,
                   },
                 });
                 collectionIdMap.set(c.id, c.id);
                 collectionsCreated += 1;
                 continue;
               }
-              if (existing.userId === req.user!.id) {
+              if (existing.userId === WORKSPACE_USER_ID) {
                 await tx.collection.update({
                   where: { id: c.id },
                   data: { name: sanitizeText(c.name, 100) || "Collection" },
@@ -463,7 +460,7 @@ export const registerExcalidashImportRoutes = (
                 data: {
                   id: newId,
                   name: sanitizeText(c.name, 100) || "Collection",
-                  userId: req.user!.id,
+                  userId: WORKSPACE_USER_ID,
                 },
               });
               collectionIdMap.set(c.id, newId);
@@ -511,14 +508,14 @@ export const registerExcalidashImportRoutes = (
                     files: filesJson,
                     preview: previewValue,
                     version: prepared.version ?? 1,
-                    userId: req.user!.id,
+                    userId: WORKSPACE_USER_ID,
                     collectionId: targetCollectionId,
                   },
                 });
                 drawingsCreated += 1;
                 continue;
               }
-              if (existing.userId === req.user!.id) {
+              if (existing.userId === WORKSPACE_USER_ID) {
                 await replaceImportedDrawing(tx, existing, {
                   name: prepared.name,
                   elements: elementsJson,
@@ -547,7 +544,7 @@ export const registerExcalidashImportRoutes = (
                   files: filesJson,
                   preview: previewValue,
                   version: prepared.version ?? 1,
-                  userId: req.user!.id,
+                  userId: WORKSPACE_USER_ID,
                   collectionId: targetCollectionId,
                 },
               });

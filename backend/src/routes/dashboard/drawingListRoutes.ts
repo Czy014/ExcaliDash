@@ -1,3 +1,4 @@
+import { WORKSPACE_USER_ID } from "../../middleware/workspace";
 import express from "express";
 import { Prisma } from "../../generated/client";
 import { canViewDrawing, getDrawingAccess } from "../../authz/sharing";
@@ -16,10 +17,8 @@ export const registerDrawingListRoutes = (
 ) => {
   const {
     prisma,
-    workspace,
     asyncHandler,
     parseJsonField,
-    getRequestPrincipal,
     buildDrawingsCacheKey,
     getCachedDrawingsBody,
     cacheDrawingsResponse,
@@ -40,13 +39,8 @@ export const registerDrawingListRoutes = (
 
   app.get(
     "/drawings",
-    workspace,
     asyncHandler(async (req, res) => {
-      if (!req.user) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-
-      const trashCollectionId = getUserTrashCollectionId(req.user.id);
+      const trashCollectionId = getUserTrashCollectionId(WORKSPACE_USER_ID);
       const {
         search,
         collectionId,
@@ -56,7 +50,7 @@ export const registerDrawingListRoutes = (
         sortField,
         sortDirection,
       } = req.query;
-      const where: Prisma.DrawingWhereInput = { userId: req.user.id };
+      const where: Prisma.DrawingWhereInput = { userId: WORKSPACE_USER_ID };
       const searchTerm =
         typeof search === "string" && search.trim().length > 0
           ? search.trim()
@@ -83,7 +77,7 @@ export const registerDrawingListRoutes = (
             return res.status(404).json({ error: "Collection not found" });
           }
 
-          if (collection.userId !== req.user.id) {
+          if (collection.userId !== WORKSPACE_USER_ID) {
             return res.status(404).json({ error: "Collection not found" });
           }
 
@@ -119,7 +113,6 @@ export const registerDrawingListRoutes = (
 
       const cacheKey =
         buildDrawingsCacheKey({
-          userId: req.user.id,
           searchTerm: searchTerm ?? "",
           collectionFilter: collectionFilterKey,
           includeData: shouldIncludeData,
@@ -175,7 +168,10 @@ export const registerDrawingListRoutes = (
       if (shouldIncludeData) {
         responsePayload = (drawings as any[]).map((d: any) => ({
           ...d,
-          collectionId: toPublicTrashCollectionId(d.collectionId, req.user!.id),
+          collectionId: toPublicTrashCollectionId(
+            d.collectionId,
+            WORKSPACE_USER_ID,
+          ),
           elements: parseJsonField(d.elements, []),
           appState: parseJsonField(d.appState, {}),
           files: parseJsonField(d.files, {}),
@@ -185,7 +181,10 @@ export const registerDrawingListRoutes = (
       } else {
         responsePayload = (drawings as any[]).map((d: any) => ({
           ...d,
-          collectionId: toPublicTrashCollectionId(d.collectionId, req.user!.id),
+          collectionId: toPublicTrashCollectionId(
+            d.collectionId,
+            WORKSPACE_USER_ID,
+          ),
           creatorName: d.user?.name ?? null,
           user: undefined,
         }));
@@ -198,7 +197,7 @@ export const registerDrawingListRoutes = (
         offset: parsedOffset,
       };
 
-      const body = cacheDrawingsResponse(cacheKey, finalResponse, req.user.id);
+      const body = cacheDrawingsResponse(cacheKey, finalResponse);
       res.setHeader("X-Cache", "MISS");
       res.setHeader("Content-Type", "application/json");
       return res.send(body);
@@ -209,14 +208,11 @@ export const registerDrawingListRoutes = (
   // Registered before `/drawings/:id` so previews aren't treated as an id.
   app.get(
     "/drawings/:id/preview",
-    workspace,
     asyncHandler(async (req, res) => {
-      const principal = await getRequestPrincipal(req);
       const { id } = req.params;
 
       const access = await getDrawingAccess({
         prisma,
-        principal,
         drawingId: id,
       });
       if (!canViewDrawing(access)) {

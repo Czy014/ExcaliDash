@@ -20,18 +20,6 @@ export interface AuditLogData {
   details?: Record<string, unknown>;
 }
 
-export interface AuditLogResult {
-  id: string;
-  userId: string | null;
-  action: string;
-  resource: string | null;
-  ipAddress: string | null;
-  userAgent: string | null;
-  details: unknown | null;
-  createdAt: Date;
-  user: { id: string; email: string; name: string } | null;
-}
-
 /**
  * Log a security event to the audit log
  * This should be called for important security-related actions
@@ -62,57 +50,5 @@ export const logAuditEvent = async (data: AuditLogData): Promise<void> => {
         error,
       );
     }
-  }
-};
-
-/**
- * Get audit logs for a user (or all users if userId is not provided)
- * Returns empty array if audit logging is disabled or table doesn't exist
- */
-export const getAuditLogs = async (
-  userId?: string,
-  limit: number = 100,
-): Promise<AuditLogResult[]> => {
-  try {
-    const { config } = await import("../config");
-    if (!config.enableAuditLogging) {
-      return []; // Feature disabled, return empty array
-    }
-
-    const logs = await prismaProvider().auditLog.findMany({
-      where: userId ? { userId } : undefined,
-      orderBy: { createdAt: "desc" },
-      take: limit,
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-          },
-        },
-      },
-    });
-
-    return logs.map((log) => ({
-      ...log,
-      details: (() => {
-        if (!log.details) return null;
-        try {
-          return JSON.parse(log.details) as unknown;
-        } catch {
-          return null;
-        }
-      })(),
-    }));
-  } catch (error) {
-    const { config } = await import("../config");
-    if (config.isDev) {
-      console.debug(
-        "Failed to retrieve audit logs (feature disabled or table missing):",
-        error,
-      );
-    }
-    return [];
   }
 };

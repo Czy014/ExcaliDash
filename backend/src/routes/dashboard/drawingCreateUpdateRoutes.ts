@@ -1,3 +1,4 @@
+import { WORKSPACE_USER_ID } from "../../middleware/workspace";
 import express from "express";
 import { v4 as uuidv4 } from "uuid";
 import { Prisma } from "../../generated/client";
@@ -23,7 +24,6 @@ export const registerDrawingCreateUpdateRoutes = (
 ) => {
   const {
     prisma,
-    workspace,
     asyncHandler,
     validateImportedDrawing,
     drawingCreateSchema,
@@ -34,7 +34,6 @@ export const registerDrawingCreateUpdateRoutes = (
     config,
     internDrawingFiles,
     parseJsonField,
-    getRequestPrincipal,
   } = context;
 
   // Compensate only failed creation under this request's unpublished UUID.
@@ -78,10 +77,7 @@ export const registerDrawingCreateUpdateRoutes = (
   };
   app.post(
     "/drawings",
-    workspace,
     asyncHandler(async (req, res) => {
-      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-
       const isImportedDrawing = req.headers["x-imported-file"] === "true";
       if (isImportedDrawing && !validateImportedDrawing(req.body)) {
         return res.status(400).json({
@@ -109,11 +105,12 @@ export const registerDrawingCreateUpdateRoutes = (
       const targetCollectionIdRaw =
         payload.collectionId === undefined ? null : payload.collectionId;
       const targetCollectionId =
-        toInternalTrashCollectionId(targetCollectionIdRaw, req.user.id) ?? null;
+        toInternalTrashCollectionId(targetCollectionIdRaw, WORKSPACE_USER_ID) ??
+        null;
 
       if (
         targetCollectionId &&
-        !isTrashCollectionId(targetCollectionId, req.user.id)
+        !isTrashCollectionId(targetCollectionId, WORKSPACE_USER_ID)
       ) {
         const collection = await prisma.collection.findFirst({
           where: { id: targetCollectionId },
@@ -121,11 +118,11 @@ export const registerDrawingCreateUpdateRoutes = (
         if (!collection)
           return res.status(404).json({ error: "Collection not found" });
 
-        if (collection.userId !== req.user.id) {
+        if (collection.userId !== WORKSPACE_USER_ID) {
           return res.status(404).json({ error: "Collection not found" });
         }
       } else if (targetCollectionIdRaw === "trash") {
-        await ensureTrashCollection(prisma, req.user.id);
+        await ensureTrashCollection(prisma, WORKSPACE_USER_ID);
       }
 
       const newDrawingId = uuidv4();
@@ -133,7 +130,7 @@ export const registerDrawingCreateUpdateRoutes = (
       const knownFileIdsBefore = await listDrawingFileIds(newDrawingId);
       const processedFiles = await internDrawingFiles(
         originalFiles,
-        req.user.id,
+        WORKSPACE_USER_ID,
         newDrawingId,
       );
       const rewritten = rewritePreviewForInternedFiles(
@@ -152,7 +149,7 @@ export const registerDrawingCreateUpdateRoutes = (
             name: drawingName,
             elements: JSON.stringify(payload.elements),
             appState: JSON.stringify(payload.appState),
-            userId: req.user.id,
+            userId: WORKSPACE_USER_ID,
             collectionId: targetCollectionId,
             preview: processedPreview,
             files: JSON.stringify(processedFiles),
@@ -172,7 +169,7 @@ export const registerDrawingCreateUpdateRoutes = (
         ...newDrawing,
         collectionId: toPublicTrashCollectionId(
           newDrawing.collectionId,
-          req.user.id,
+          WORKSPACE_USER_ID,
         ),
         elements: parseJsonField(newDrawing.elements, []),
         appState: parseJsonField(newDrawing.appState, {}),
@@ -183,14 +180,10 @@ export const registerDrawingCreateUpdateRoutes = (
 
   app.put(
     "/drawings/:id",
-    workspace,
     asyncHandler(async (req, res) => {
-      const principal = await getRequestPrincipal(req);
-
       const { id } = req.params;
       const access = await getDrawingAccess({
         prisma,
-        principal,
         drawingId: id,
       });
       if (!canEditDrawing(access)) {
@@ -228,8 +221,6 @@ export const registerDrawingCreateUpdateRoutes = (
       };
 
       const ownerUserId = existingDrawing.userId;
-      const actingUserId =
-        principal?.kind === "user" ? principal.userId : ownerUserId;
       const trashCollectionId = getUserTrashCollectionId(ownerUserId);
       const isSceneUpdate =
         payload.elements !== undefined ||
@@ -313,7 +304,7 @@ export const registerDrawingCreateUpdateRoutes = (
             trashCollectionId;
         } else if (payload.collectionId) {
           const ownedCollection = await prisma.collection.findFirst({
-            where: { id: payload.collectionId, userId: actingUserId },
+            where: { id: payload.collectionId, userId: WORKSPACE_USER_ID },
           });
           if (!ownedCollection) {
             return res.status(404).json({ error: "Collection not found" });

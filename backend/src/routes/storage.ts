@@ -1,3 +1,4 @@
+import { WORKSPACE_USER_ID } from "../middleware/workspace";
 /**
  * Storage management routes:
  *   POST   /drawings/:id/trim          – trim deleted elements and orphaned files
@@ -29,7 +30,6 @@ export { collectRetainedDrawingFileIds } from "./storage/retainedFiles";
 
 export type StorageRouteDeps = {
   prisma: PrismaClient;
-  workspace: express.RequestHandler;
   asyncHandler: <T = void>(
     fn: (
       req: express.Request,
@@ -45,24 +45,16 @@ export const registerStorageRoutes = (
   app: express.Express,
   deps: StorageRouteDeps,
 ): void => {
-  const {
-    prisma,
-    workspace,
-    asyncHandler,
-    parseJsonField,
-    invalidateDrawingsCache,
-  } = deps;
+  const { prisma, asyncHandler, parseJsonField, invalidateDrawingsCache } =
+    deps;
 
   // ------------------------------------------------------------------
   // POST /drawings/:id/trim
   // ------------------------------------------------------------------
   app.post(
     "/drawings/:id/trim",
-    workspace,
     asyncHandler(async (req, res) => {
-      const userId = req.user?.id;
-      if (!userId) return res.status(401).json({ error: "Unauthorized" });
-
+      const userId = WORKSPACE_USER_ID;
       const { id } = req.params;
       const { confirmName } = req.body ?? {};
 
@@ -176,11 +168,8 @@ export const registerStorageRoutes = (
   // ------------------------------------------------------------------
   app.get(
     "/drawings/:id/files/diff",
-    workspace,
     asyncHandler(async (req, res) => {
-      const userId = req.user?.id;
-      if (!userId) return res.status(401).json({ error: "Unauthorized" });
-
+      const userId = WORKSPACE_USER_ID;
       const { id } = req.params;
 
       const drawing = await prisma.drawing.findFirst({
@@ -223,11 +212,8 @@ export const registerStorageRoutes = (
   // ------------------------------------------------------------------
   app.delete(
     "/drawings/:id/files/orphans",
-    workspace,
     asyncHandler(async (req, res) => {
-      const userId = req.user?.id;
-      if (!userId) return res.status(401).json({ error: "Unauthorized" });
-
+      const userId = WORKSPACE_USER_ID;
       const { id } = req.params;
       const { confirmName, fileIds: rawFileIds } = req.body ?? {};
 

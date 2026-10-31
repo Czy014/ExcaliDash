@@ -14,6 +14,7 @@ import type { PrismaClient } from "../generated/client";
 import { registerDrawingCreateUpdateRoutes } from "../routes/dashboard/drawingCreateUpdateRoutes";
 import type { DrawingRouteContext } from "../routes/dashboard/drawingRouteContext";
 import { cleanupTestDb, getTestPrisma, setupTestDb } from "./testUtils";
+import { WORKSPACE_USER_ID } from "../middleware/workspace";
 
 describe("HTTP scene persistence", () => {
   let prisma: PrismaClient;
@@ -25,21 +26,17 @@ describe("HTTP scene persistence", () => {
     prisma = getTestPrisma();
     const owner = await prisma.user.create({
       data: {
+        id: WORKSPACE_USER_ID,
         email: "saved-scene@test.local",
         passwordHash: "unused",
         name: "Owner",
       },
     });
     ownerId = owner.id;
-    const auth: express.RequestHandler = (req, _res, next) => {
-      req.user = { id: ownerId } as express.Request["user"];
-      next();
-    };
     app = express();
     app.use(express.json());
     registerDrawingCreateUpdateRoutes(app, {
       prisma,
-      workspace: auth,
       asyncHandler: (handler) => (req, res, next) => {
         void handler(req, res, next).catch(next);
       },
@@ -50,7 +47,6 @@ describe("HTTP scene persistence", () => {
         preview: z.string().optional(),
         version: z.number().optional(),
       }),
-      getRequestPrincipal: async () => ({ kind: "user", userId: ownerId }),
       invalidateDrawingsCache: vi.fn(),
       config: { nodeEnv: "test" },
       internDrawingFiles: async (files) => files,

@@ -23,6 +23,7 @@ import { applySceneUpdateTx } from "../routes/dashboard/sceneUpdate";
 import { internDrawingFiles } from "../fileProcessing";
 import { registerFileRoutes } from "../routes/files";
 import { storeDrawingFileOnce } from "../drawingFileStore";
+import { WORKSPACE_USER_ID } from "../middleware/workspace";
 import {
   deleteS3Object,
   copyS3Object,
@@ -76,7 +77,6 @@ describe("File reference lifetime", () => {
   let prisma: PrismaClient;
   let ownerId: string;
   let app: express.Express;
-  let auth: express.RequestHandler;
 
   beforeAll(() => {
     setupTestDb();
@@ -98,18 +98,14 @@ describe("File reference lifetime", () => {
     const owner = await prisma.user.create({
       data: {
         email: "retention@test.local",
+        id: WORKSPACE_USER_ID,
         passwordHash: "unused",
         name: "Owner",
       },
     });
     ownerId = owner.id;
-    auth = (req, _res, next) => {
-      req.user = { id: ownerId } as express.Request["user"];
-      next();
-    };
     app = express();
     app.use(express.json());
-    app.use(auth);
   });
 
   const createDrawing = () =>
@@ -125,7 +121,6 @@ describe("File reference lifetime", () => {
   const mountStorage = () =>
     registerStorageRoutes(app, {
       prisma,
-      workspace: auth,
       asyncHandler,
       parseJsonField,
       invalidateDrawingsCache: vi.fn(),
@@ -136,7 +131,6 @@ describe("File reference lifetime", () => {
   ) =>
     registerDrawingCreateUpdateRoutes(app, {
       prisma,
-      workspace: auth,
       asyncHandler,
       parseJsonField,
       drawingUpdateSchema: z.object({
@@ -144,7 +138,6 @@ describe("File reference lifetime", () => {
         files: z.record(z.string(), z.any()),
         version: z.number().optional(),
       }),
-      getRequestPrincipal: async () => ({ kind: "user", userId: ownerId }),
       invalidateDrawingsCache: vi.fn(),
       config: { nodeEnv: "test" },
       internDrawingFiles: internFiles,
@@ -153,11 +146,10 @@ describe("File reference lifetime", () => {
   const mountFiles = () =>
     registerFileRoutes(app, {
       prisma,
-      workspace: auth,
       asyncHandler,
     });
 
-  it("lists a link editor's first raw S3 upload in the drawing owner's storage namespace", async () => {
+  it("stores link edits in the historical owner's S3 namespace without granting storage management", async () => {
     vi.mocked(isS3Enabled).mockReturnValue(true);
     const peer = await prisma.user.create({
       data: {
@@ -166,22 +158,24 @@ describe("File reference lifetime", () => {
         name: "Peer",
       },
     });
-    const drawing = await createDrawing();
+    const drawing = await prisma.drawing.create({
+      data: {
+        userId: peer.id,
+        name: "Historical drawing",
+        elements: "[]",
+        appState: "{}",
+        files: "{}",
+      },
+    });
     await prisma.drawingLinkShare.create({
       data: {
         drawingId: drawing.id,
-        createdByUserId: ownerId,
+        createdByUserId: peer.id,
         tokenHash: "test-link-hash",
         permission: "edit",
       },
     });
 
-    auth = (req, _res, next) => {
-      req.user = {
-        id: req.headers["x-test-user-id"] || ownerId,
-      } as express.Request["user"];
-      next();
-    };
     const objects = new Map<string, Buffer>();
     vi.mocked(uploadBuffer).mockImplementation(async (key, bytes) => {
       objects.set(key, bytes);
@@ -196,7 +190,6 @@ describe("File reference lifetime", () => {
     const bytes = Buffer.from([1, 2, 3]);
     const uploaded = await request(app)
       .put(`/drawings/${drawing.id}/files/peer-first`)
-      .set("x-test-user-id", peer.id)
       .set("Content-Type", "image/png")
       .send(bytes);
     expect(uploaded.status).toBe(200);
@@ -205,20 +198,13 @@ describe("File reference lifetime", () => {
     );
     expect(downloaded.status).toBe(302);
     const diff = await request(app).get(`/drawings/${drawing.id}/files/diff`);
-    expect(diff.status).toBe(200);
-    expect(diff.body.files).toEqual([
-      expect.objectContaining({
-        fileId: "peer-first",
-        inS3: true,
-        inS3Record: true,
-      }),
-    ]);
+    expect(diff.status).toBe(404);
     const row = await prisma.drawingFile.findUnique({
       where: {
         drawingId_fileId: { drawingId: drawing.id, fileId: "peer-first" },
       },
     });
-    expect(row?.s3Key).toMatch(new RegExp(`^${ownerId}/${drawing.id}/`));
+    expect(row?.s3Key).toMatch(new RegExp(`^${peer.id}/${drawing.id}/`));
     expect(objects.get(row!.s3Key!)).toEqual(bytes);
     const retried = await request(app)
       .put(`/drawings/${drawing.id}/files/peer-first`)
@@ -942,7 +928,6 @@ describe("File reference lifetime", () => {
     const drawing = await createDrawing();
     registerDrawingCreateUpdateRoutes(app, {
       prisma,
-      workspace: auth,
       asyncHandler,
       parseJsonField,
       drawingUpdateSchema: z.object({
@@ -950,7 +935,6 @@ describe("File reference lifetime", () => {
         files: z.record(z.string(), z.any()),
         version: z.number(),
       }),
-      getRequestPrincipal: async () => ({ kind: "user", userId: ownerId }),
       invalidateDrawingsCache: vi.fn(),
       config: { nodeEnv: "test" },
       internDrawingFiles: async (

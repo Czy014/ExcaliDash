@@ -1,12 +1,10 @@
 type DrawingsCacheEntry = {
   body: Buffer;
   expiresAt: number;
-  userId: string;
   bytes: number;
 };
 
 export type DrawingsCacheKeyParts = {
-  userId: string;
   searchTerm: string;
   collectionFilter: string;
   includeData: boolean;
@@ -60,7 +58,6 @@ export const createDrawingsCacheStore = (
 
   const buildDrawingsCacheKey = (keyParts: DrawingsCacheKeyParts) =>
     JSON.stringify([
-      keyParts.userId,
       keyParts.searchTerm,
       keyParts.collectionFilter,
       keyParts.includeData ? "full" : "summary",
@@ -81,11 +78,7 @@ export const createDrawingsCacheStore = (
     return entry.body;
   };
 
-  const cacheDrawingsResponse = (
-    key: string,
-    payload: unknown,
-    userId = "",
-  ): Buffer => {
+  const cacheDrawingsResponse = (key: string, payload: unknown): Buffer => {
     const body = Buffer.from(JSON.stringify(payload));
     const bytes = body.byteLength;
 
@@ -103,7 +96,6 @@ export const createDrawingsCacheStore = (
     drawingsCache.set(key, {
       body,
       bytes,
-      userId,
       expiresAt: Date.now() + ttlMs,
     });
     totalBytes += bytes;
@@ -111,17 +103,9 @@ export const createDrawingsCacheStore = (
     return body;
   };
 
-  // Called with no argument on writes that may affect any user's list (imports,
-  // legacy paths). Called with a userId to scope invalidation to a single owner.
-  const invalidateDrawingsCache = (userId?: string) => {
-    if (!userId) {
-      drawingsCache.clear();
-      totalBytes = 0;
-      return;
-    }
-    for (const [key, entry] of drawingsCache.entries()) {
-      if (entry.userId === userId) dropEntry(key, entry);
-    }
+  const invalidateDrawingsCache = () => {
+    drawingsCache.clear();
+    totalBytes = 0;
   };
 
   setInterval(() => {

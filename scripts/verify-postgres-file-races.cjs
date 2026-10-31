@@ -36,6 +36,7 @@ const { registerDrawingCreateUpdateRoutes } = require(
   path.join(dist, "routes/dashboard/drawingCreateUpdateRoutes"),
 );
 const { registerFileRoutes } = require(path.join(dist, "routes/files"));
+const { WORKSPACE_USER_ID } = require(path.join(dist, "middleware/workspace"));
 const expectVulnerable = process.argv.includes("--expect-vulnerable");
 const barrierTimeoutMs = Number(process.env.RACE_BARRIER_TIMEOUT_MS || 15000);
 assert(Number.isFinite(barrierTimeoutMs) && barrierTimeoutMs > 0);
@@ -178,17 +179,11 @@ async function failedSaveRace() {
   const releaseGood = deferred();
   const app = express();
   app.use(express.json());
-  const auth = (req, _res, next) => {
-    req.user = { id: owner.id };
-    next();
-  };
-  app.use(auth);
   const asyncHandler = (handler) => (req, res, next) => {
     void handler(req, res, next).catch(next);
   };
   registerDrawingCreateUpdateRoutes(app, {
     prisma,
-    workspace: auth,
     asyncHandler,
     parseJsonField,
     drawingUpdateSchema: z.object({
@@ -196,8 +191,6 @@ async function failedSaveRace() {
       files: z.record(z.string(), z.any()),
       version: z.number(),
     }),
-    getRequestPrincipal: async () => ({ kind: "user", userId: owner.id }),
-    respondWithAuthErrorIfPresent: () => false,
     invalidateDrawingsCache: () => {},
     config: { nodeEnv: "test" },
     internDrawingFiles: async (files, userId, drawingId) => {
@@ -221,7 +214,6 @@ async function failedSaveRace() {
   });
   registerFileRoutes(app, {
     prisma,
-    workspace: auth,
     asyncHandler,
   });
   app.use((error, _req, res, next) => {
@@ -330,6 +322,7 @@ async function failedSaveRace() {
 (async () => {
   owner = await prisma.user.create({
     data: {
+      id: WORKSPACE_USER_ID,
       email: `pg-races-${Date.now()}@test.local`,
       passwordHash: "unused",
       name: "PG races",

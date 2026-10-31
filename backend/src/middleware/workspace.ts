@@ -4,25 +4,12 @@ import type { PrismaClient } from "../generated/client";
 // Keep the existing disabled-mode owner so upgrading does not hide drawings.
 export const WORKSPACE_USER_ID = "bootstrap-admin";
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: { id: string };
-    }
-  }
-}
-
-export const createWorkspaceMiddleware =
-  (db: PrismaClient): RequestHandler =>
-  async (req, _res, next) => {
+export const createWorkspaceMiddleware = (db: PrismaClient): RequestHandler => {
+  let ready: Promise<{ id: string }> | undefined;
+  return async (_req, _res, next) => {
     try {
-      const existing = await db.user.findUnique({
-        where: { id: WORKSPACE_USER_ID },
-        select: { id: true },
-      });
-      req.user =
-        existing ??
-        (await db.user.upsert({
+      await (ready ??= Promise.resolve(
+        db.user.upsert({
           where: { id: WORKSPACE_USER_ID },
           update: {},
           create: {
@@ -33,9 +20,12 @@ export const createWorkspaceMiddleware =
             isActive: false,
           },
           select: { id: true },
-        }));
+        }),
+      ));
       next();
     } catch (error) {
+      ready = undefined;
       next(error);
     }
   };
+};

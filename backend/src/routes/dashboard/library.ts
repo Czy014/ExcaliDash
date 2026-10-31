@@ -1,3 +1,4 @@
+import { WORKSPACE_USER_ID } from "../../middleware/workspace";
 import express from "express";
 import { DashboardRouteDeps } from "./types";
 
@@ -5,15 +6,12 @@ export const registerLibraryRoutes = (
   app: express.Express,
   deps: DashboardRouteDeps,
 ) => {
-  const { prisma, workspace, asyncHandler, parseJsonField } = deps;
+  const { prisma, asyncHandler, parseJsonField } = deps;
 
   app.get(
     "/library",
-    workspace,
     asyncHandler(async (req, res) => {
-      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-
-      const libraryId = `user_${req.user.id}`;
+      const libraryId = `user_${WORKSPACE_USER_ID}`;
       const library = await prisma.library.findUnique({
         where: { id: libraryId },
       });
@@ -25,16 +23,12 @@ export const registerLibraryRoutes = (
 
   app.put(
     "/library",
-    workspace,
     asyncHandler(async (req, res) => {
-      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-
       const { items } = req.body;
       if (!Array.isArray(items)) {
         return res.status(400).json({ error: "Items must be an array" });
       }
-
-      const libraryId = `user_${req.user.id}`;
+      const libraryId = `user_${WORKSPACE_USER_ID}`;
       const library = await prisma.library.upsert({
         where: { id: libraryId },
         update: { items: JSON.stringify(items) },
