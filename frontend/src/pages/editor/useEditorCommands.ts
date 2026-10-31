@@ -13,6 +13,7 @@ import type { UploadedFileRefs } from "./shared";
 import { saveDrawingKeepalive } from "./keepaliveSave";
 
 type EditorCommandRefs = {
+  canSave: () => boolean;
   historyRestorePending: MutableRefObject<boolean>;
   currentDrawingVersion: MutableRefObject<number | null>;
   excalidrawAPI: MutableRefObject<any>;
@@ -96,7 +97,7 @@ export const useEditorCommands = ({
     const handleKeyDown = async (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
-        if (!canEdit || refs.historyRestorePending.current) return;
+        if (!canEdit || !refs.canSave()) return;
         if (!(
           refs.excalidrawAPI.current &&
           refs.saveData.current &&
@@ -116,7 +117,8 @@ export const useEditorCommands = ({
             suppressErrors: false,
           });
           refs.savePreview.current(drawingId, safeElements, appState, files);
-          toast.success("Saved changes to server");
+          if (!refs.hasSceneChangesSinceLoad.current)
+            toast.success("Saved changes to server");
         } catch (err) {
           console.error("Failed to save on Ctrl+S", err);
           // enqueueSceneSave surfaces its own conflict/error toast; avoid a
@@ -133,7 +135,7 @@ export const useEditorCommands = ({
     // autosave may have pending edits that would otherwise be lost; a
     // keepalive PUT survives the unload where the normal save pipeline can't.
     const handlePageHide = () => {
-      if (!canEdit || !drawingId || refs.historyRestorePending.current) return;
+      if (!canEdit || !drawingId || !refs.canSave()) return;
       const editor = refs.excalidrawAPI.current;
       if (!editor) return;
       if (!refs.hasSceneChangesSinceLoad.current) return;
@@ -153,7 +155,7 @@ export const useEditorCommands = ({
         // Same slimmed shape as the debounced save: uploaded images ship as a
         // ref, un-uploaded ones stay inline (server interns them on receipt).
         files: applyUploadedFileRefs(files, refs.uploadedRefs.current),
-        version: refs.currentDrawingVersion.current ?? undefined,
+        version: refs.currentDrawingVersion.current!,
       });
     };
     window.addEventListener("pagehide", handlePageHide);
@@ -206,6 +208,12 @@ export const useEditorCommands = ({
 
   const handleBackClick = useCallback(async () => {
     if (isSavingOnLeave || refs.historyRestorePending.current) return;
+    if (canEdit && refs.hasSceneChangesSinceLoad.current && !refs.canSave()) {
+      toast.error(
+        "Changes are unsaved. Resolve the conflict or export a local copy before leaving.",
+      );
+      return;
+    }
     setIsSavingOnLeave(true);
     let shouldNavigate = false;
     try {
@@ -235,12 +243,17 @@ export const useEditorCommands = ({
           );
           shouldNavigate = true;
         } else {
-          await Promise.all([
-            enqueueSceneSave(drawingId, safeElements, appState, files, {
-              suppressErrors: false,
-            }),
-            refs.savePreview.current(drawingId, safeElements, appState, files),
-          ]);
+          await enqueueSceneSave(drawingId, safeElements, appState, files, {
+            suppressErrors: false,
+          });
+          if (refs.hasSceneChangesSinceLoad.current)
+            throw new Error("New edits are still unsaved");
+          await refs.savePreview.current(
+            drawingId,
+            safeElements,
+            appState,
+            files,
+          );
           shouldNavigate = true;
         }
       }

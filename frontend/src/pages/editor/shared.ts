@@ -1,5 +1,3 @@
-import { applyElementOrder, reconcileElements } from "../../utils/sync";
-
 export interface ElementVersionInfo {
   version: number;
   versionNonce: number;
@@ -38,46 +36,6 @@ export const getElementContentSig = (element: any): string => {
   return `${type}|${isDeleted}|${status}|${x}|${y}|${w}|${h}|${angle}|${pointsSig}|${fileId}|${textSig}`;
 };
 
-/**
- * Matches CaptureUpdateAction.{NEVER,IMMEDIATELY} from @excalidraw/excalidraw.
- * Kept as local constants so that shared.ts doesn't pull in the full excalidraw
- * UI bundle, which breaks jsdom-based unit tests. The enum values are the
- * literal strings "NEVER" / "IMMEDIATELY" (see store.d.ts).
- */
-const CAPTURE_UPDATE_NEVER = "NEVER" as const;
-
-export type CaptureMode = "NEVER" | "IMMEDIATELY";
-
-type RemoteSceneUpdate =
-  | {
-      collaborators: Map<string, any>;
-      captureUpdate: CaptureMode;
-    }
-  | {
-      elements: any[];
-      files?: Record<string, any>;
-      captureUpdate: CaptureMode;
-    }
-  | {
-      files: Record<string, any>;
-      captureUpdate: CaptureMode;
-    };
-
-type BuildRemoteSceneUpdateInput = {
-  collaborators?: Map<string, any>;
-  localElements?: readonly any[];
-  localAppState?: any;
-  pendingElements?: readonly any[];
-  elementOrder?: readonly string[] | null;
-  lastSyncedFiles?: Record<string, any>;
-  incomingFiles?: Record<string, any>;
-  /**
-   * Undo-stack behavior for element updates. Remote peer edits default to
-   * NEVER so another user's edits are not added to this editor's undo stack.
-   */
-  captureUpdate?: CaptureMode;
-};
-
 export const getPersistedAppState = (
   appState: Record<string, any> | null | undefined,
 ) => {
@@ -89,83 +47,6 @@ export const getPersistedAppState = (
   if (appState?.gridModeEnabled != null)
     base.gridModeEnabled = appState.gridModeEnabled;
   return base;
-};
-
-export const buildRemoteSceneUpdate = ({
-  collaborators,
-  localElements = [],
-  localAppState,
-  pendingElements = [],
-  elementOrder = null,
-  lastSyncedFiles = {},
-  incomingFiles = {},
-  captureUpdate = CAPTURE_UPDATE_NEVER,
-}: BuildRemoteSceneUpdateInput): {
-  sceneUpdate: RemoteSceneUpdate | null;
-  mergedElements: any[] | null;
-  nextFiles: Record<string, any>;
-  shouldUpdateFiles: boolean;
-} => {
-  if (collaborators) {
-    return {
-      sceneUpdate: {
-        collaborators,
-        captureUpdate: CAPTURE_UPDATE_NEVER,
-      },
-      mergedElements: null,
-      nextFiles: lastSyncedFiles,
-      shouldUpdateFiles: false,
-    };
-  }
-
-  const shouldUpdateFiles = Object.keys(incomingFiles).length > 0;
-  const nextFiles = shouldUpdateFiles
-    ? { ...lastSyncedFiles, ...incomingFiles }
-    : lastSyncedFiles;
-  const hasElementOrder =
-    Array.isArray(elementOrder) && elementOrder.length > 0;
-  const shouldUpdateElements = pendingElements.length > 0 || hasElementOrder;
-
-  if (shouldUpdateElements) {
-    let mergedElements = reconcileElements(
-      localElements,
-      pendingElements,
-      localAppState,
-    );
-    if (hasElementOrder) {
-      mergedElements = applyElementOrder(mergedElements, elementOrder);
-    }
-
-    return {
-      sceneUpdate: {
-        elements: mergedElements,
-        ...(shouldUpdateFiles ? { files: nextFiles } : {}),
-        captureUpdate,
-      },
-      mergedElements,
-      nextFiles,
-      shouldUpdateFiles,
-    };
-  }
-
-  if (shouldUpdateFiles) {
-    return {
-      sceneUpdate: {
-        files: nextFiles,
-        captureUpdate: CAPTURE_UPDATE_NEVER,
-      },
-      mergedElements: null,
-      nextFiles,
-      shouldUpdateFiles,
-    };
-  }
-
-  return {
-    sceneUpdate: null,
-    mergedElements: null,
-    nextFiles,
-    shouldUpdateFiles,
-  };
 };
 
 export const haveSameElements = (
@@ -198,6 +79,24 @@ export const haveSameElements = (
 
 export const hasRenderableElements = (elements: readonly any[] = []): boolean =>
   elements.some((element: any) => !element?.isDeleted);
+
+export const getRequiredSceneFiles = (
+  elements: readonly any[],
+  files: Record<string, any>,
+) =>
+  Object.fromEntries(
+    [
+      ...new Set(
+        elements
+          .filter((element) => !element.isDeleted && element.type === "image")
+          .map((element) => element.fileId),
+      ),
+    ].map((id) => {
+      const file = files[id];
+      if (!file?.dataURL) throw new Error("Image bytes are not ready");
+      return [id, file];
+    }),
+  );
 
 /**
  * Guard against transient empty snapshots (e.g. hydration/reload races) from
@@ -289,7 +188,7 @@ export type UploadedFileRefs = Record<string, string>;
 
 /**
  * Replace the inline base64 dataURL of any already-uploaded file with a small
- * metadata + ref entry so scene PUTs and socket emits carry KB, not MB.
+ * metadata + ref entry so scene PUTs carry KB, not MB.
  *
  * Only entries that (a) have a recorded ref and (b) still carry an inline
  * `data:` URL are rewritten — entries not yet uploaded keep their inline bytes
@@ -387,32 +286,4 @@ export const validateEmbeddableUrl = (value: string): boolean => {
   } catch {
     return false;
   }
-};
-
-export { getInitialsFromName } from "../../utils/user";
-
-export const getColorFromString = (str: string): string => {
-  const COLORS = [
-    "#ef4444",
-    "#f97316",
-    "#f59e0b",
-    "#84cc16",
-    "#22c55e",
-    "#10b981",
-    "#14b8a6",
-    "#06b6d4",
-    "#0ea5e9",
-    "#3b82f6",
-    "#6366f1",
-    "#8b5cf6",
-    "#a855f7",
-    "#d946ef",
-    "#ec4899",
-    "#f43f5e",
-  ];
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return COLORS[Math.abs(hash) % COLORS.length];
 };

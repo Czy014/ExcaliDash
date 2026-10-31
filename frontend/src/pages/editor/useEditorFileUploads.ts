@@ -69,7 +69,7 @@ const runWithConcurrency = async (
  * Watches the drawing's file set and uploads each newly inserted image to the
  * per-file endpoint (compressing first, exactly as the save path does, so the
  * stored bytes match). Successful uploads are recorded in `uploadedRefs`, which
- * the persistence / broadcast / keepalive paths use to swap the inline dataURL
+ * the persistence / keepalive paths use to swap the inline dataURL
  * for a small `/api/files/...` ref. Uploads are idempotent and content-keyed,
  * so a duplicate scan is a cheap no-op. Against an older backend the capability
  * flag flips off after the first 404/501 and this hook becomes inert.

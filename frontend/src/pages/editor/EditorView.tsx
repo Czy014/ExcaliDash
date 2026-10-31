@@ -17,19 +17,14 @@ import { Toaster } from "sonner";
 import { LanguageSelector } from "../../components/LanguageSelector";
 import { GridStepSelector } from "../../components/GridStepSelector";
 import { ShareModal } from "../../components/ShareModal";
-import { UserAvatar as ProfileAvatar } from "../../components/UserAvatar";
-import type { UserIdentity } from "../../utils/identity";
 import { UIOptions, validateEmbeddableUrl } from "./shared";
-
-interface Peer extends UserIdentity {
-  isActive: boolean;
-}
 
 type EditorViewProps = {
   id?: string;
   accessLevel: "none" | "view" | "edit" | "owner";
   autoHideEnabled: boolean;
   autosaveFailing: boolean;
+  resolving: boolean;
   canEdit: boolean;
   drawingName: string;
   editorContainerRef: React.RefObject<HTMLDivElement>;
@@ -44,9 +39,7 @@ type EditorViewProps = {
   isSceneLoading: boolean;
   langCode: string;
   loadError: string | null;
-  me: UserIdentity;
   newName: string;
-  peers: Peer[];
   theme: string;
   onBackClick: () => void;
   onCanvasChange: (
@@ -59,7 +52,6 @@ type EditorViewProps = {
   onLibraryChange: (items: readonly any[]) => void;
   onNavigateHome: () => void;
   onNewNameChange: (value: string) => void;
-  onPointerUpdate: (payload: any) => void;
   onRenameBlur: () => void;
   onRenameStart: () => void;
   onRenameSubmit: (event: React.FormEvent) => void;
@@ -75,35 +67,12 @@ type EditorViewProps = {
   onToggleTheme: () => void;
 };
 
-const CollaboratorAvatar = ({
-  user,
-  label,
-  inactive = false,
-}: {
-  user: UserIdentity;
-  label: string;
-  inactive?: boolean;
-}) => (
-  <div className="relative group" data-testid="collaborator-avatar">
-    <ProfileAvatar
-      name={user.name}
-      size="toolbar"
-      className={clsx(
-        "transition-all duration-300",
-        inactive && "opacity-30 grayscale",
-      )}
-    />
-    <div className="pointer-events-none absolute right-0 top-full z-50 mt-2 whitespace-nowrap rounded-lg bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
-      {label}
-    </div>
-  </div>
-);
-
 export const EditorView: React.FC<EditorViewProps> = ({
   id,
   accessLevel,
   autoHideEnabled,
   autosaveFailing,
+  resolving,
   canEdit,
   drawingName,
   editorContainerRef,
@@ -118,9 +87,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
   isSceneLoading,
   langCode,
   loadError,
-  me,
   newName,
-  peers,
   theme,
   onBackClick,
   onCanvasChange,
@@ -129,7 +96,6 @@ export const EditorView: React.FC<EditorViewProps> = ({
   onLibraryChange,
   onNavigateHome,
   onNewNameChange,
-  onPointerUpdate,
   onRenameBlur,
   onRenameStart,
   onRenameSubmit,
@@ -163,7 +129,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
       <div className="flex items-center gap-4">
         <button
           onClick={onBackClick}
-          disabled={isSavingOnLeave}
+          disabled={isSavingOnLeave || resolving}
           className={`flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-full text-gray-600 dark:text-gray-300 disabled:opacity-50 disabled:cursor-wait transition-all duration-200 ${isSavingOnLeave ? "pr-4" : ""}`}
         >
           {isSavingOnLeave ? (
@@ -253,25 +219,6 @@ export const EditorView: React.FC<EditorViewProps> = ({
         >
           <Download size={20} />
         </button>
-        <div className="h-6 w-px bg-gray-300 dark:bg-gray-700" />
-        <div className="flex items-center">
-          <CollaboratorAvatar user={me} label={`${me.name} (You)`} />
-          {peers.length > 0 ? (
-            <>
-              <div className="h-6 w-px bg-gray-300 dark:bg-gray-700 mx-2" />
-              <div className="flex items-center gap-2">
-                {peers.map((peer) => (
-                  <CollaboratorAvatar
-                    key={peer.id}
-                    user={peer}
-                    label={peer.name}
-                    inactive={!peer.isActive}
-                  />
-                ))}
-              </div>
-            </>
-          ) : null}
-        </div>
       </div>
     </header>
     {accessLevel === "owner" && id ? (
@@ -287,7 +234,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
       ref={editorContainerRef}
       className="relative w-full flex-1"
       onDropCapture={(event) => {
-        if (isHistoryOpen) {
+        if (isHistoryOpen || resolving || isSavingOnLeave) {
           event.preventDefault();
           event.stopPropagation();
           return;
@@ -320,12 +267,13 @@ export const EditorView: React.FC<EditorViewProps> = ({
           langCode={langCode}
           initialData={initialData}
           onChange={onCanvasChange}
-          onPointerUpdate={onPointerUpdate}
           onLibraryChange={onLibraryChange}
           excalidrawAPI={onSetExcalidrawAPI}
           UIOptions={UIOptions}
           validateEmbeddable={validateEmbeddableUrl}
-          viewModeEnabled={!canEdit || isHistoryOpen}
+          viewModeEnabled={
+            !canEdit || isHistoryOpen || resolving || isSavingOnLeave
+          }
         >
           <MainMenu>
             <MainMenu.Item onSelect={onToggleTheme} shortcut="Shift+Alt+D">

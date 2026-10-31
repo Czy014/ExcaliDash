@@ -5,8 +5,8 @@ import { API_URL, getCsrfHeader } from "../../api";
  *
  * The normal axios save pipeline cannot run reliably from a `pagehide`
  * handler (async interceptors, connection teardown), so we use `fetch` with
- * `keepalive: true`, which the browser guarantees to flush even as the
- * document is being discarded. `navigator.sendBeacon` can't be used here
+ * `keepalive: true` as a best effort during unload. Browser limits still apply.
+ * `navigator.sendBeacon` can't be used here
  * because it cannot set the CSRF header nor issue a PUT.
  *
  * Returns true if the request was dispatched, false if it could not be.
@@ -15,7 +15,12 @@ export const saveDrawingKeepalive = (
   drawingId: string,
   body: Record<string, unknown>,
 ): boolean => {
-  if (!drawingId || typeof fetch !== "function") return false;
+  if (
+    !drawingId ||
+    typeof fetch !== "function" ||
+    !Number.isSafeInteger(body.version)
+  )
+    return false;
   try {
     const csrf = getCsrfHeader();
     const headers: Record<string, string> = {
@@ -28,7 +33,7 @@ export const saveDrawingKeepalive = (
       keepalive: true,
       headers,
       body: JSON.stringify(body),
-    });
+    }).catch(() => undefined);
     return true;
   } catch {
     return false;

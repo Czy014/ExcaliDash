@@ -18,9 +18,7 @@ export const HistoryPreviewCanvas = ({
     className="absolute inset-0 z-20"
     aria-label="Historical drawing preview"
   >
-    {/* This canvas has no live API, onChange, upload, or socket callbacks.
-        Keep the live canvas mounted underneath so pending saves and incoming
-        collaboration updates always use the current scene, even on cancel. */}
+    {/* Keep the live canvas mounted so pending saves cannot read this preview. */}
     <Excalidraw
       key={snapshot.id}
       initialData={{

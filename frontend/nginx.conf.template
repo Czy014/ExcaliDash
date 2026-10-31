@@ -50,17 +50,14 @@ http {
         add_header X-Content-Type-Options "nosniff" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
         add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
-        add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; frame-src https:; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https: ws: wss:;" always;
+        add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; frame-src https:; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https:;" always;
 
-        # API and WebSocket proxy to backend
+        # API proxy to backend
         # BACKEND_URL is substituted at container startup (default: backend:8000)
         location /api/ {
             proxy_pass http://excalidash_backend/;
             proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection 'upgrade';
             proxy_set_header Host $host;
-            proxy_cache_bypass $http_upgrade;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $forwarded_proto;
@@ -76,23 +73,6 @@ http {
             proxy_connect_timeout 300s;
             proxy_send_timeout 300s;
             proxy_read_timeout 300s;
-        }
-
-        # WebSocket proxy for Socket.IO
-        location /socket.io/ {
-            proxy_pass http://excalidash_backend/socket.io/;
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection 'upgrade';
-            proxy_set_header Host $host;
-            proxy_cache_bypass $http_upgrade;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $forwarded_proto;
-            
-            # Longer timeouts for WebSocket connections
-            proxy_read_timeout 3600s;
-            proxy_send_timeout 3600s;
         }
 
         # Frontend routes

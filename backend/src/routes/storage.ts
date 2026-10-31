@@ -5,7 +5,6 @@
  *   DELETE /drawings/:id/files/orphans – delete selected orphaned files
  */
 import express from "express";
-import type { Server as SocketIoServer } from "socket.io";
 import { PrismaClient } from "../generated/client";
 import {
   isS3Enabled,
@@ -40,7 +39,6 @@ export type StorageRouteDeps = {
   ) => express.RequestHandler;
   parseJsonField: <T>(rawValue: string | null | undefined, fallback: T) => T;
   invalidateDrawingsCache: () => void;
-  io: SocketIoServer;
 };
 
 export const registerStorageRoutes = (
@@ -53,18 +51,7 @@ export const registerStorageRoutes = (
     asyncHandler,
     parseJsonField,
     invalidateDrawingsCache,
-    io,
   } = deps;
-
-  /**
-   * Tell anyone joined to the drawing's collaboration room that the
-   * server-side state has changed underneath them. The frontend reacts
-   * by reloading the drawing — otherwise a collaborator's next save
-   * would re-introduce the trimmed-away elements.
-   */
-  const notifyServerStateChange = (drawingId: string) => {
-    io.to(`drawing_${drawingId}`).emit("drawing-server-update", { drawingId });
-  };
 
   // ------------------------------------------------------------------
   // POST /drawings/:id/trim
@@ -172,7 +159,6 @@ export const registerStorageRoutes = (
       }
 
       invalidateDrawingsCache();
-      notifyServerStateChange(id);
 
       return res.json({
         trimmed: {
@@ -348,7 +334,6 @@ export const registerStorageRoutes = (
       const errorCount = s3DeleteErrors;
 
       invalidateDrawingsCache();
-      notifyServerStateChange(id);
 
       return res.json({ deleted: deletePlan.deletedCount, errors: errorCount });
     }),

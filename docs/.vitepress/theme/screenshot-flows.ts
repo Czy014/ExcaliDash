@@ -124,11 +124,4 @@ export const workspaceSlides = [
     dark: "/images/screenshots/share-drawing.png",
     alt: "Share controls open for adding people and choosing permissions",
   },
-  {
-    title: "Collaborate in real time",
-    text: "Open the same drawing with invited collaborators. Their avatars and named cursors show who is working on the canvas.",
-    light: "/images/collaboration-light.png",
-    dark: "/images/collaboration-dark.png",
-    alt: "Live deployment drawing with collaborator avatars and named cursors",
-  },
 ];

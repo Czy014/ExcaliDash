@@ -4,7 +4,6 @@ import path from "path";
 import fs from "fs";
 import { promises as fsPromises } from "fs";
 import { createServer } from "http";
-import { Server } from "socket.io";
 import { Worker } from "worker_threads";
 import multer from "multer";
 import { z } from "zod";
@@ -39,7 +38,6 @@ import {
 } from "./db/sqliteMaintenance";
 import { createDrawingsCacheStore } from "./server/drawingsCache";
 import { registerCsrfProtection } from "./server/csrf";
-import { registerSocketHandlers } from "./server/socket";
 import {
   createHttpsRedirectPolicy,
   getHttpsRedirectUrl,
@@ -113,7 +111,6 @@ const isAllowedOrigin = (origin?: string): boolean => {
 const uploadDir = path.resolve(__dirname, "../uploads");
 const MAX_UPLOAD_SIZE_BYTES = config.uploadMaxBytes;
 const BODY_LIMIT = `${config.bodyLimitMb}mb`;
-const BODY_LIMIT_BYTES = config.bodyLimitMb * 1024 * 1024;
 const MAX_PAGE_SIZE = 200;
 const MAX_IMPORT_ARCHIVE_ENTRIES = 6000;
 const MAX_IMPORT_COLLECTIONS = 1000;
@@ -168,13 +165,6 @@ if (trustProxyValue === true) {
   console.log(`[config] trust proxy: ${trustProxyValue}`);
 }
 const httpServer = createServer(app);
-const io = new Server(httpServer, {
-  cors: {
-    origin: (origin, cb) => cb(null, isAllowedOrigin(origin ?? undefined)),
-    credentials: true,
-  },
-  maxHttpBufferSize: BODY_LIMIT_BYTES,
-});
 const parseJsonField = <T>(
   rawValue: string | null | undefined,
   fallback: T,
@@ -497,12 +487,6 @@ const removeFileIfExists = async (filePath?: string) => {
     console.error("Failed to remove file", { filePath, error });
   }
 };
-const socketHandlers = registerSocketHandlers({
-  io,
-  prisma,
-  authModeService,
-  jwtSecret: config.jwtSecret,
-});
 app.get("/health", async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
@@ -590,8 +574,6 @@ registerDashboardRoutes(app, {
   logAuditEvent,
   internDrawingFiles: (files, userId, drawingId) =>
     internDrawingFilesWithPrisma(files, userId, drawingId, prisma),
-  revalidateDrawingAccess: socketHandlers.revalidateDrawingAccess,
-  io,
 });
 registerFileRoutes(app, { prisma, requireAuth, optionalAuth, asyncHandler });
 registerStorageRoutes(app, {
@@ -600,7 +582,6 @@ registerStorageRoutes(app, {
   asyncHandler,
   parseJsonField,
   invalidateDrawingsCache,
-  io,
 });
 registerImportExportRoutes({
   app,
@@ -661,19 +642,17 @@ if (isMain) {
       process.exit(1);
     }, 10000);
     forceExit.unref();
-    /* io.close() disconnects all sockets and closes the underlying httpServer. */ io.close(
-      () => {
-        void waitForSqliteMaintenance()
-          .then(() => prisma.$disconnect())
-          .catch((err) => {
-            console.error("[shutdown] prisma disconnect failed:", err);
-          })
-          .finally(() => {
-            clearTimeout(forceExit);
-            process.exit(0);
-          });
-      },
-    );
+    httpServer.close(() => {
+      void waitForSqliteMaintenance()
+        .then(() => prisma.$disconnect())
+        .catch((err) => {
+          console.error("[shutdown] prisma disconnect failed:", err);
+        })
+        .finally(() => {
+          clearTimeout(forceExit);
+          process.exit(0);
+        });
+    });
   };
   process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
   process.on("SIGINT", () => gracefulShutdown("SIGINT"));

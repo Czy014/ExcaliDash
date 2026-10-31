@@ -1,5 +1,5 @@
 /**
- * Real HTTP + Socket.IO verification against an explicitly disposable instance.
+ * Real HTTP verification against an explicitly disposable instance.
  * Requires seeded owner/peer/import accounts, auth enabled, and normal CSRF.
  * RUNTIME_URL=http://nginx RUNTIME_PASSWORD=... RUNTIME_DISPOSABLE=1 node scripts/verify-runtime.mjs
  * RUNTIME_STATE=/tmp/runtime-state.json persists public fixture expectations.
@@ -25,7 +25,6 @@ const checkout =
 const requireFrontend = createRequire(
   path.join(checkout, "frontend/package.json"),
 );
-const { io } = requireFrontend("socket.io-client");
 const JSZip = requireFrontend("jszip");
 const origin = process.env.RUNTIME_URL?.replace(/\/$/, "");
 assert(
@@ -40,7 +39,6 @@ assert.equal(
 const statePath =
   process.env.RUNTIME_STATE || "/tmp/excalidash-runtime-state.json";
 const timeout = Number(process.env.RUNTIME_TIMEOUT_MS || 15000);
-const sockets = new Set();
 const results = [];
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const png = Buffer.from(
@@ -165,59 +163,6 @@ class Client {
     assert(this.user?.id, "login must return an authenticated user");
     return this;
   }
-  async connect(transport = "websocket") {
-    const socket = io(this.origin, {
-      transports: [transport],
-      extraHeaders: { Cookie: this.cookieHeader() },
-      reconnection: false,
-      autoConnect: false,
-      timeout,
-    });
-    sockets.add(socket);
-    const ready = event(socket, "connect");
-    socket.connect();
-    await ready;
-    return socket;
-  }
-}
-function event(socket, name, predicate = () => true) {
-  return new Promise((resolve, reject) => {
-    const clean = () => {
-      clearTimeout(timer);
-      socket.off(name, handler);
-      socket.off("connect_error", fail);
-    };
-    const fail = (error) => {
-      clean();
-      reject(error);
-    };
-    const handler = (payload) => {
-      if (predicate(payload)) {
-        clean();
-        resolve(payload);
-      }
-    };
-    const timer = setTimeout(
-      () => fail(new Error(`timed out waiting for ${name}`)),
-      timeout,
-    );
-    socket.on(name, handler);
-    socket.on("connect_error", fail);
-  });
-}
-async function join(socket, drawingId, client) {
-  const ack = await new Promise((resolve, reject) =>
-    socket.timeout(timeout).emit(
-      "join-room",
-      {
-        drawingId,
-        user: { id: "spoofed-id", name: "spoofed-name", color: "#123456" },
-      },
-      (error, value) => (error ? reject(error) : resolve(value)),
-    ),
-  );
-  assert.equal(ack.user.id, client.user.id);
-  assert.equal(ack.user.name, client.user.name);
 }
 async function scenario(name, callback) {
   const started = Date.now();
@@ -464,7 +409,7 @@ try {
         "nginx must route back to the same account database after backend restart",
       );
     await scenario(
-      "backend restart preserves scenes, histories, image bytes, and reconnect",
+      "backend restart preserves scenes, histories, image bytes, and shared access",
       async () => {
         for (const expected of state.drawings) {
           const actual = await owner.request(`/drawings/${expected.id}`);
@@ -480,8 +425,6 @@ try {
           for (const fileId of Object.keys(expected.files))
             await bytesFor(owner, expected.id, fileId);
         }
-        const socket = await peer.connect();
-        await join(socket, state.sharedDrawingId, peer);
         const actual = await peer.request(`/drawings/${state.sharedDrawingId}`);
         assert.deepEqual(
           actual.elements,
@@ -493,44 +436,23 @@ try {
   } else {
     const run = randomUUID().slice(0, 8);
     let drawing;
-    let ownerSocket;
-    let peerSocket;
+    await scenario("authenticated HTTP access through nginx", async () => {
+      drawing = await create(owner, `runtime-${run}-editing`, [shape("base")]);
+      await owner.request(`/drawings/${drawing.id}/permissions`, {
+        method: "POST",
+        body: { granteeUserId: peer.user.id, permission: "edit" },
+      });
+      const anonymous = new Client("anonymous");
+      await anonymous.request(`/drawings/${drawing.id}`, {
+        status: [401, 404],
+      });
+    });
     await scenario(
-      "authenticated HTTP and websocket/polling clients through nginx",
-      async () => {
-        drawing = await create(owner, `runtime-${run}-collaboration`, [
-          shape("base"),
-        ]);
-        await owner.request(`/drawings/${drawing.id}/permissions`, {
-          method: "POST",
-          body: { granteeUserId: peer.user.id, permission: "edit" },
-        });
-        const anonymous = new Client("anonymous");
-        await anonymous.request(`/drawings/${drawing.id}`, {
-          status: [401, 404],
-        });
-        ownerSocket = await owner.connect("websocket");
-        peerSocket = await peer.connect("polling");
-        await join(ownerSocket, drawing.id, owner);
-        await join(peerSocket, drawing.id, peer);
-      },
-    );
-    await scenario(
-      "simultaneous guarded saves reject stale writes and rebase preserves both edits",
+      "simultaneous guarded saves reject stale writes and keep the winner unchanged",
       async () => {
         for (let round = 0; round < 5; round++) {
           const initial = await owner.request(`/drawings/${drawing.id}`);
           const edits = [shape(`owner-${round}`), shape(`peer-${round}`)];
-          const waitOwner = event(
-            ownerSocket,
-            "element-update",
-            (payload) => payload.persisted && payload.drawingId === drawing.id,
-          );
-          const waitPeer = event(
-            peerSocket,
-            "element-update",
-            (payload) => payload.persisted && payload.drawingId === drawing.id,
-          );
           const outcomes = await Promise.all(
             [owner, peer].map((client, index) =>
               client.request(`/drawings/${drawing.id}`, {
@@ -553,75 +475,12 @@ try {
           assert.equal(conflicts.length, 1);
           const winner = winners[0];
           assert.equal(winner.version, initial.version + 1);
-          const echoes = await Promise.all([waitOwner, waitPeer]);
-          for (const echo of echoes) {
-            assert.deepEqual(echo.elements, winner.elements);
-            assert.deepEqual(
-              echo.elementOrder,
-              winner.elements.map((element) => element.id),
-            );
-          }
-          const missing = edits.find(
-            (edit) =>
-              !winner.elements.some((element) => element.id === edit.id),
-          );
-          drawing = await save(owner, winner, [...winner.elements, missing]);
-          for (const edit of edits)
-            assert(drawing.elements.some((element) => element.id === edit.id));
+          const actual = await owner.request(`/drawings/${drawing.id}`);
+          assert.deepEqual(actual.elements, winner.elements);
+          assert.equal(actual.version, winner.version);
+          drawing = winner;
         }
-        assert.equal(drawing.elements.length, 11);
-      },
-    );
-    await scenario(
-      "delayed realtime updates relay while committed scenes remain authoritative",
-      async () => {
-        for (const version of [3, 1, 2]) {
-          const received = event(
-            peerSocket,
-            "element-update",
-            (payload) => payload.runtimeMarker === `${run}-${version}`,
-          );
-          ownerSocket.emit("element-update", {
-            drawingId: drawing.id,
-            elements: [shape("delayed-peer-element", version)],
-            files: {},
-            runtimeMarker: `${run}-${version}`,
-          });
-          assert.equal((await received).elements[0].version, version);
-        }
-        const actual = await owner.request(`/drawings/${drawing.id}`);
-        assert.deepEqual(actual.elements, drawing.elements);
-        assert.equal(actual.version, drawing.version);
-      },
-    );
-    await scenario(
-      "joining after realtime delta receives persisted echo and reconnect reloads saved scene",
-      async () => {
-        peerSocket.disconnect();
-        ownerSocket.emit("element-update", {
-          drawingId: drawing.id,
-          elements: [shape("late-join")],
-          files: {},
-        });
-        peerSocket = await peer.connect();
-        await join(peerSocket, drawing.id, peer);
-        const committed = event(
-          peerSocket,
-          "element-update",
-          (payload) =>
-            payload.persisted &&
-            payload.elements.some((element) => element.id === "late-join"),
-        );
-        drawing = await save(owner, drawing, [
-          ...drawing.elements,
-          shape("late-join"),
-        ]);
-        assert.deepEqual((await committed).elements, drawing.elements);
-        peerSocket.disconnect();
-        peerSocket = await peer.connect();
-        await join(peerSocket, drawing.id, peer);
-        const recovered = await peer.request(`/drawings/${drawing.id}`);
-        assert.deepEqual(recovered.elements, drawing.elements);
+        assert.equal(drawing.elements.length, 6);
       },
     );
     await scenario(
@@ -1015,6 +874,4 @@ try {
     }),
   );
   process.exitCode = 1;
-} finally {
-  for (const socket of sockets) socket.disconnect();
 }

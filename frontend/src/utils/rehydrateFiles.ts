@@ -10,8 +10,7 @@
  * image (the preview sanitizer drops non-`data:` hrefs).
  *
  * The fix is to fetch each referenced file and re-inline it as a base64
- * `data:` URL before the files reach Excalidraw — on scene load and on socket
- * file receipt. In non-S3 mode every dataURL is already a `data:` URL, so
+ * `data:` URL before the files reach Excalidraw — on scene load. In non-S3 mode every dataURL is already a `data:` URL, so
  * {@link filesNeedRehydration} short-circuits and nothing is fetched.
  */
 
@@ -85,8 +84,7 @@ const fetchAsDataUrl = async (
  * `data:` URL. Files that are already inline, or whose fetch fails, are kept
  * verbatim. Returns the input unchanged when nothing needs rehydrating.
  *
- * This awaits every fetch before resolving — used by socket-receipt callers
- * that need the whole batch inlined before merging it into the scene. For the
+ * This awaits every fetch before resolving when a caller needs the whole batch. For the
  * scene-load path prefer {@link rehydrateFilesProgressive}, which paints first
  * and streams each file into the canvas as it lands.
  */

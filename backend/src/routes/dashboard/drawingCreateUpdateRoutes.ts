@@ -37,7 +37,6 @@ export const registerDrawingCreateUpdateRoutes = (
     parseJsonField,
     getRequestPrincipal,
     respondWithAuthErrorIfPresent,
-    io,
   } = context;
 
   // Compensate only failed creation under this request's unpublished UUID.
@@ -409,19 +408,6 @@ export const registerDrawingCreateUpdateRoutes = (
 
       const savedElements = parseJsonField(updatedDrawing.elements, []);
       const savedFiles = parseJsonField(updatedDrawing.files, {});
-      if (isSceneUpdate) {
-        // A peer can join after the realtime delta but before this autosave.
-        // Deliver the committed scene so that edit is eventually received.
-        io?.to(`drawing_${id}`).emit("element-update", {
-          drawingId: id,
-          persisted: true,
-          elements: savedElements,
-          files: savedFiles,
-          elementOrder: savedElements
-            .map((element: { id?: unknown } | null) => element?.id)
-            .filter((elementId: unknown) => typeof elementId === "string"),
-        });
-      }
 
       return res.json({
         ...updatedDrawing,

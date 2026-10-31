@@ -10,7 +10,6 @@ import {
 import express from "express";
 import request from "supertest";
 import { z } from "zod";
-import type { Server } from "socket.io";
 import { PrismaClient } from "../generated/client";
 import { getTestPrisma, setupTestDb, cleanupTestDb } from "./testUtils";
 import { encodeSnapshotField } from "../snapshots/snapshotCodec";
@@ -130,7 +129,6 @@ describe("File reference lifetime", () => {
       asyncHandler,
       parseJsonField,
       invalidateDrawingsCache: vi.fn(),
-      io: { to: () => ({ emit: vi.fn() }) } as unknown as Server,
     });
 
   const mountDrawingUpdates = (

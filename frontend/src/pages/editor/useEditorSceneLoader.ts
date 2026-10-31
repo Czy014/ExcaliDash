@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { NavigateFunction } from "react-router-dom";
 import type { MutableRefObject } from "react";
 import { toast } from "sonner";
@@ -43,6 +43,7 @@ type SceneLoaderParams = {
   setIsSceneLoading: (loading: boolean) => void;
   setLoadError: (error: string | null) => void;
   recordElementVersion: (element: any) => void;
+  computeElementOrderSig: (elements: readonly any[]) => string;
   normalizeImageElementStatus: (
     elements?: readonly any[],
     files?: Record<string, any> | null,
@@ -60,6 +61,8 @@ const buildEmptyScene = () => ({
   scrollToContent: true,
 });
 
+export type SceneLoaderRefs = SceneLoaderParams["refs"];
+
 export const useEditorSceneLoader = ({
   id,
   user,
@@ -73,8 +76,13 @@ export const useEditorSceneLoader = ({
   setIsSceneLoading,
   setLoadError,
   recordElementVersion,
+  computeElementOrderSig,
   normalizeImageElementStatus,
 }: SceneLoaderParams) => {
+  const fileLoadGeneration = useRef(0);
+  const invalidateFileLoads = useCallback(() => {
+    fileLoadGeneration.current += 1;
+  }, []);
   const resetRefs = useCallback(() => {
     refs.isBootstrappingScene.current = true;
     refs.hasHydratedInitialScene.current = false;
@@ -108,6 +116,7 @@ export const useEditorSceneLoader = ({
     // drawing's data used to leak into another. The cleanup flips this flag and
     // every post-await step bails on it.
     let cancelled = false;
+    const generation = ++fileLoadGeneration.current;
     resetRefs();
     setIsReady(false);
     setIsSceneLoading(true);
@@ -166,6 +175,8 @@ export const useEditorSceneLoader = ({
           typeof data.version === "number" ? data.version : null;
         refs.lastPersistedElements.current = elements;
         elements.forEach((element: any) => recordElementVersion(element));
+        refs.lastSyncedElementOrderSig.current =
+          computeElementOrderSig(elements);
         const persistedAppState = getPersistedAppState(data.appState || {});
         const hydratedAppState = {
           ...persistedAppState,
@@ -175,7 +186,15 @@ export const useEditorSceneLoader = ({
         setInitialData({
           elements,
           appState: hydratedAppState,
-          files,
+          // addFiles ignores existing IDs, so reserve referenced files for the
+          // progressive loader that supplies their actual bytes.
+          files: Object.fromEntries(
+            Object.entries(files).filter(
+              ([, file]) =>
+                typeof file?.dataURL === "string" &&
+                file.dataURL.startsWith("data:"),
+            ),
+          ),
           scrollToContent: true,
           libraryItems,
         });
@@ -186,7 +205,7 @@ export const useEditorSceneLoader = ({
         // how compressedFilesResult is handled in useEditorPersistence, so the
         // freshly-inlined bytes are never diffed by getFilesDelta as a "changed
         // file" and re-uploaded/re-saved. `isSyncing` wraps the addFiles push so
-        // it doesn't trigger the broadcast/save loop. Every callback bails when
+        // it doesn't trigger the local save loop. Every callback bails when
         // the effect is cancelled (stale-load guard); files that resolve before
         // the Excalidraw API is registered queue and flush once it appears.
         const pendingCanvasFiles: Record<string, any>[] = [];
@@ -206,7 +225,12 @@ export const useEditorSceneLoader = ({
         };
         const flushPendingCanvasFiles = () => {
           flushScheduled = false;
-          if (cancelled || pendingCanvasFiles.length === 0) return;
+          if (
+            cancelled ||
+            fileLoadGeneration.current !== generation ||
+            pendingCanvasFiles.length === 0
+          )
+            return;
           if (pushToCanvas(pendingCanvasFiles)) {
             pendingCanvasFiles.length = 0;
             return;
@@ -220,7 +244,7 @@ export const useEditorSceneLoader = ({
           fileId: string,
           hydratedFile: Record<string, any>,
         ) => {
-          if (cancelled) return;
+          if (cancelled || fileLoadGeneration.current !== generation) return;
           refs.latestFiles.current = {
             ...refs.latestFiles.current,
             [fileId]: hydratedFile,
@@ -241,7 +265,11 @@ export const useEditorSceneLoader = ({
             }
           }
         };
-        void rehydrateFilesProgressive(files, handleFileReady, () => cancelled);
+        void rehydrateFilesProgressive(
+          files,
+          handleFileReady,
+          () => cancelled || fileLoadGeneration.current !== generation,
+        );
       } catch (err) {
         if (cancelled) return;
         console.error("Failed to load drawing", err);
@@ -299,6 +327,7 @@ export const useEditorSceneLoader = ({
     navigate,
     normalizeImageElementStatus,
     recordElementVersion,
+    computeElementOrderSig,
     refs,
     resetRefs,
     setAccessLevel,
@@ -309,4 +338,5 @@ export const useEditorSceneLoader = ({
     setLoadError,
     userIdKey,
   ]);
+  return { invalidateFileLoads };
 };

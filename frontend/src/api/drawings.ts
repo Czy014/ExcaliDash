@@ -315,13 +315,18 @@ export const revokeLinkShare = async (
 export const createDrawing = async (
   name?: string,
   collectionId?: string | null,
+  scene?: Pick<Drawing, "elements" | "appState" | "files">,
 ) => {
-  const response = await api.post<{ id: string }>("/drawings", {
-    name: name || "Untitled Drawing",
-    collectionId: collectionId ?? null,
-    appState: {},
-    elements: [],
-  });
+  const response = await api.post<{ id: string; version: number }>(
+    "/drawings",
+    {
+      name: name || "Untitled Drawing",
+      collectionId: collectionId ?? null,
+      appState: {},
+      elements: [],
+      ...scene,
+    },
+  );
   return response.data;
 };
 

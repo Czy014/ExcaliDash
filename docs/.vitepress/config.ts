@@ -4,7 +4,7 @@ import { docsReviewPlugin } from "./review/plugin.mjs";
 export default defineConfig({
   title: "ExcaliDash",
   description:
-    "Self-host Excalidraw with saved drawings, collections, real-time collaboration, and version history. Deploy ExcaliDash with Docker Compose.",
+    "Self-host Excalidraw with saved drawings, collections, local drafts and explicit save conflicts, and version history. Deploy ExcaliDash with Docker Compose.",
   sitemap: { hostname: "https://excalidash.xyz" },
   transformHead({ pageData }) {
     if (pageData.relativePath === "404.md") return [];
@@ -59,7 +59,8 @@ export default defineConfig({
           { text: "First run", link: "/guide/first-run" },
           { text: "Authentication", link: "/guide/authentication" },
           { text: "Configuration", link: "/guide/configuration" },
-          { text: "Collaboration", link: "/guide/collaboration" },
+          { text: "Personal editing", link: "/guide/personal-editing" },
+          { text: "Sharing", link: "/guide/collaboration" },
           { text: "Storage and backups", link: "/guide/storage-backups" },
         ],
       },

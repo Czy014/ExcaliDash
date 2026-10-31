@@ -26,7 +26,7 @@ Common settings are listed below. See `backend/src/config/registry/` for all var
 | `SNAPSHOT_RETENTION_DAYS` | `2`                            | Drawing snapshot retention period                  |
 | `UPLOAD_MAX_MB`           | `100`                          | Import and database-restore upload limit           |
 | `FILE_UPLOAD_MAX_MB`      | `100`                          | Per-image upload limit                             |
-| `BODY_LIMIT_MB`           | `50`                           | Scene request body and Socket.IO buffer limit      |
+| `BODY_LIMIT_MB`           | `50`                           | Scene request body limit                           |
 
 The frontend image limits HTTP request bodies to 50 MB in `frontend/nginx.conf.template`.
 

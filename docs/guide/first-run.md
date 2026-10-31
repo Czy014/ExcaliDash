@@ -42,7 +42,7 @@ For OpenID Connect (OIDC), [configure the provider](/guide/authentication#config
 
 ## Your workspace
 
-Use the arrows to explore an established example workspace, drawing sharing, and live collaboration.
+Use the arrows to explore an established example workspace, drawing sharing, and version history.
 
 <ScreenshotCarousel label="Workspace organization and sharing" :slides="workspaceSlides" />
 

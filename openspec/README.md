@@ -9,13 +9,13 @@
 - [drawing-library](specs/drawing-library/spec.md)：绘图、分类、完整画布、导入导出及历史记录。
 - [scene-persistence](specs/scene-persistence/spec.md)：HTTP 场景保存、版本检查、图片保留和历史快照。
 
-上游当前仍有实时协作，前端会在保存冲突后自动合并重试。初始化规格不代表这些行为已经改变。
+个人编辑 change 已完成实现并同步规格；当前主规格描述的是无实时协作的个人编辑、版本冲突处理和本地草稿行为。
 
-## 待实施变更
+## 已归档变更
 
-[remove-realtime-collaboration](changes/remove-realtime-collaboration/proposal.md) 定义个人编辑方式：取消实时同步，保留现有基础功能，改用明确的版本冲突处理和本地草稿。
+[2026-10-31-remove-realtime-collaboration](changes/archive/2026-10-31-remove-realtime-collaboration/proposal.md) 定义个人编辑方式：取消实时同步，保留现有基础功能，改用明确的版本冲突处理和本地草稿。
 
-proposal、design、delta specs 和 tasks 准备完成后才开始实施。实施任务、测试和构建验证完成后，再同步主规格并归档；当前 change 保持待实施状态。
+实施分支已完成测试和构建验证；生产部署、Homebase 接入及原生 `/draw/` 前缀兼容由后续独立 change 负责。
 
 ## 工作方式
 

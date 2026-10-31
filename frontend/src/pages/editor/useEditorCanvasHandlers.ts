@@ -13,6 +13,7 @@ import {
 } from "./droppedImages";
 import {
   hasRenderableElements,
+  getPersistedAppState,
   haveSameElements,
   isStaleNonRenderableSnapshot,
   isSuspiciousEmptySnapshot,
@@ -49,9 +50,7 @@ type CanvasHandlerRefs = {
 
 type UseEditorCanvasHandlersParams = {
   canEdit: boolean;
-  debouncedSavePreview: (drawingId: string) => void;
   drawingId: string | undefined;
-  emitFilesDeltaIfNeeded: (nextFiles: Record<string, any>) => boolean;
   isReady: boolean;
   refs: CanvasHandlerRefs;
   resolveSafeSnapshot: (candidateSnapshot?: readonly any[]) => {
@@ -59,32 +58,28 @@ type UseEditorCanvasHandlersParams = {
     staleEmptySnapshot: boolean;
     staleNonRenderableSnapshot: boolean;
   };
-  broadcastChanges: (
+  recordLocalChanges: (
     elements: readonly any[],
     currentFiles?: Record<string, any>,
+    appStateChanged?: boolean,
   ) => void;
 };
 
 export const useEditorCanvasHandlers = ({
   canEdit,
-  debouncedSavePreview,
   drawingId,
-  emitFilesDeltaIfNeeded,
   isReady,
   refs,
   resolveSafeSnapshot,
-  broadcastChanges,
+  recordLocalChanges,
 }: UseEditorCanvasHandlersParams) => {
   const {
-    debouncedSave: debouncedSaveRef,
     excalidrawAPI: excalidrawAPIRef,
     hasHydratedInitialScene: hasHydratedInitialSceneRef,
-    hasSceneChangesSinceLoad: hasSceneChangesSinceLoadRef,
     initialSceneElements: initialSceneElementsRef,
     isBootstrappingScene: isBootstrappingSceneRef,
     isSyncing: isSyncingRef,
     isUnmounting: isUnmountingRef,
-    lastLocalChangeAt: lastLocalChangeAtRef,
     latestAppState: latestAppStateRef,
     latestElements: latestElementsRef,
     latestFiles: latestFilesRef,
@@ -96,6 +91,9 @@ export const useEditorCanvasHandlers = ({
       if (!canEdit) return;
       if (isUnmountingRef.current) return;
       if (isSyncingRef.current) return;
+      const appStateChanged =
+        JSON.stringify(getPersistedAppState(latestAppStateRef.current)) !==
+        JSON.stringify(getPersistedAppState(appState));
       latestAppStateRef.current = appState;
       const currentFiles = files || excalidrawAPIRef.current?.getFiles() || {};
       if (Object.keys(currentFiles).length > 0) {
@@ -131,10 +129,10 @@ export const useEditorCanvasHandlers = ({
       }
       if (isBootstrappingSceneRef.current && !hasRenderable) return;
       latestElementsRef.current = allElements;
-      broadcastChanges(allElements, currentFiles);
+      recordLocalChanges(allElements, currentFiles, appStateChanged);
     },
     [
-      broadcastChanges,
+      recordLocalChanges,
       canEdit,
       excalidrawAPIRef,
       hasHydratedInitialSceneRef,
@@ -226,32 +224,20 @@ export const useEditorCanvasHandlers = ({
       if (isSyncingRef.current) return;
       if (!excalidrawAPIRef.current) return;
       const nextFiles = excalidrawAPIRef.current.getFiles?.() || {};
-      const didEmit = emitFilesDeltaIfNeeded(nextFiles);
-      if (didEmit && latestAppStateRef.current && debouncedSaveRef.current) {
-        hasSceneChangesSinceLoadRef.current = true;
-        lastLocalChangeAtRef.current = Date.now();
-        debouncedSaveRef.current(
-          drawingId,
-          latestElementsRef.current,
-          latestAppStateRef.current,
-          nextFiles,
-        );
-        debouncedSavePreview(drawingId);
-      }
+      recordLocalChanges(
+        excalidrawAPIRef.current.getSceneElementsIncludingDeleted(),
+        nextFiles,
+      );
     }, FILES_POLL_INTERVAL_MS);
     return () => window.clearInterval(interval);
   }, [
     canEdit,
-    debouncedSavePreview,
-    debouncedSaveRef,
     drawingId,
-    emitFilesDeltaIfNeeded,
     excalidrawAPIRef,
-    hasSceneChangesSinceLoadRef,
     isReady,
+    recordLocalChanges,
     isSyncingRef,
     isUnmountingRef,
-    lastLocalChangeAtRef,
     latestAppStateRef,
     latestElementsRef,
   ]);

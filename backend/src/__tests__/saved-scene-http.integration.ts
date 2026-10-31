@@ -10,18 +10,15 @@ import {
 import express from "express";
 import request from "supertest";
 import { z } from "zod";
-import type { Server } from "socket.io";
 import type { PrismaClient } from "../generated/client";
 import { registerDrawingCreateUpdateRoutes } from "../routes/dashboard/drawingCreateUpdateRoutes";
 import type { DrawingRouteContext } from "../routes/dashboard/drawingRouteContext";
 import { cleanupTestDb, getTestPrisma, setupTestDb } from "./testUtils";
 
-describe("persisted collaboration scene broadcasts", () => {
+describe("HTTP scene persistence", () => {
   let prisma: PrismaClient;
   let ownerId: string;
   let app: express.Express;
-  const emit = vi.fn();
-  const to = vi.fn(() => ({ emit }));
 
   beforeAll(async () => {
     setupTestDb();
@@ -59,7 +56,6 @@ describe("persisted collaboration scene broadcasts", () => {
       invalidateDrawingsCache: vi.fn(),
       config: { nodeEnv: "test" },
       internDrawingFiles: async (files) => files,
-      io: { to } as unknown as Server,
     } as DrawingRouteContext);
   });
 
@@ -83,7 +79,7 @@ describe("persisted collaboration scene broadcasts", () => {
       },
     });
 
-  it("delivers the committed scene and merged files to peers that missed the realtime delta", async () => {
+  it("returns the committed scene and merged files without a collaboration server", async () => {
     const drawing = await createDrawing();
     const elements = [
       { id: "earlier", version: 1 },
@@ -97,36 +93,60 @@ describe("persisted collaboration scene broadcasts", () => {
         version: 3,
       });
     expect(response.status).toBe(200);
-    expect(to).toHaveBeenCalledWith(`drawing_${drawing.id}`);
-    expect(emit).toHaveBeenCalledTimes(1);
-    expect(emit).toHaveBeenCalledWith("element-update", {
-      drawingId: drawing.id,
-      persisted: true,
-      elements: response.body.elements,
-      files: response.body.files,
-      elementOrder: ["earlier", "new"],
+    expect(response.body.version).toBe(4);
+    expect(response.body.elements).toEqual(elements);
+    const saved = await prisma.drawing.findUniqueOrThrow({
+      where: { id: drawing.id },
     });
+    expect(JSON.parse(saved.elements)).toEqual(elements);
     expect(response.body.files).toHaveProperty("earlierImage");
     expect(response.body.files).toHaveProperty("newImage");
   });
 
-  it("does not broadcast a scene rejected by its version guard", async () => {
+  it("rejects a stale version without changing the saved scene", async () => {
     const drawing = await createDrawing();
     await request(app)
       .put(`/drawings/${drawing.id}`)
       .send({ elements: [{ id: "stale" }], version: 2 })
       .expect(409);
-    expect(to).not.toHaveBeenCalled();
-    expect(emit).not.toHaveBeenCalled();
+    const saved = await prisma.drawing.findUniqueOrThrow({
+      where: { id: drawing.id },
+    });
+    expect(saved.version).toBe(3);
+    expect(JSON.parse(saved.elements)).toEqual([{ id: "earlier", version: 1 }]);
   });
 
-  it("does not broadcast preview-only updates as scene edits", async () => {
+  it("does not change the scene version for preview-only updates", async () => {
     const drawing = await createDrawing();
     await request(app)
       .put(`/drawings/${drawing.id}`)
       .send({ preview: "<svg></svg>" })
       .expect(200);
-    expect(to).not.toHaveBeenCalled();
-    expect(emit).not.toHaveBeenCalled();
+    const saved = await prisma.drawing.findUniqueOrThrow({
+      where: { id: drawing.id },
+    });
+    expect(saved.version).toBe(3);
+    expect(saved.preview).toBe("<svg></svg>");
+  });
+  it("allows at most one of two simultaneous saves based on the same version", async () => {
+    const drawing = await createDrawing();
+    const responses = await Promise.all(
+      ["a", "b"].map((id) =>
+        request(app)
+          .put(`/drawings/${drawing.id}`)
+          .send({ elements: [{ id }], version: 3 }),
+      ),
+    );
+    expect(responses.map((response) => response.status).sort()).toEqual([
+      200, 409,
+    ]);
+    const winner = responses.find((response) => response.status === 200)!;
+    const loser = responses.find((response) => response.status === 409)!;
+    expect(loser.body.code).toBe("VERSION_CONFLICT");
+    const saved = await prisma.drawing.findUniqueOrThrow({
+      where: { id: drawing.id },
+    });
+    expect(JSON.parse(saved.elements)).toEqual(winner.body.elements);
+    expect(saved.version).toBe(4);
   });
 });

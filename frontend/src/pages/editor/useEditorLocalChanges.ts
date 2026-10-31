@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback } from "react";
 import type { MutableRefObject } from "react";
-import { applyUploadedFileRefs, getFilesDelta } from "./shared";
-import type { UploadedFileRefs } from "./shared";
+import { getFilesDelta } from "./shared";
 
-type UseEditorBroadcastParams = {
+type UseEditorLocalChangesParams = {
   drawingId: string | undefined;
   excalidrawAPI: MutableRefObject<any>;
   lastLocalChangeAtRef: MutableRefObject<number>;
@@ -11,9 +10,7 @@ type UseEditorBroadcastParams = {
   lastSyncedFilesRef: MutableRefObject<Record<string, any>>;
   latestAppStateRef: MutableRefObject<any>;
   latestFilesRef: MutableRefObject<any>;
-  socketMeRef: MutableRefObject<{ id: string }>;
-  socketRef: MutableRefObject<any>;
-  uploadedRefs: MutableRefObject<UploadedFileRefs>;
+  latestElementsRef: MutableRefObject<readonly any[]>;
   debouncedSave: (
     drawingId: string,
     elements: readonly any[],
@@ -31,7 +28,7 @@ type UseEditorBroadcastParams = {
   setHasSceneChangesSinceLoad: () => void;
 };
 
-export const useEditorBroadcast = ({
+export const useEditorLocalChanges = ({
   drawingId,
   excalidrawAPI,
   lastLocalChangeAtRef,
@@ -39,9 +36,7 @@ export const useEditorBroadcast = ({
   lastSyncedFilesRef,
   latestAppStateRef,
   latestFilesRef,
-  socketMeRef,
-  socketRef,
-  uploadedRefs,
+  latestElementsRef,
   debouncedSave,
   debouncedSavePreview,
   computeElementOrderSig,
@@ -49,16 +44,14 @@ export const useEditorBroadcast = ({
   normalizeImageElementStatus,
   recordElementVersion,
   setHasSceneChangesSinceLoad,
-}: UseEditorBroadcastParams) => {
-  const timeoutRef = useRef<number | null>(null);
-  const lastRunAtRef = useRef(0);
-  const trailingArgsRef = useRef<
-    [readonly any[], Record<string, any> | undefined] | null
-  >(null);
-
-  const emitChanges = useCallback(
-    (elements: readonly any[], currentFiles?: Record<string, any>) => {
-      if (!socketRef.current || !drawingId) return;
+}: UseEditorLocalChangesParams) => {
+  const recordLocalChanges = useCallback(
+    (
+      elements: readonly any[],
+      currentFiles?: Record<string, any>,
+      appStateChanged = false,
+    ) => {
+      if (!drawingId) return;
       const changes: any[] = [];
       const nextFiles = currentFiles || excalidrawAPI.current?.getFiles() || {};
       const normalizedElements = normalizeImageElementStatus(
@@ -85,23 +78,16 @@ export const useEditorBroadcast = ({
       if (shouldSyncFiles) {
         lastSyncedFilesRef.current = nextFiles;
       }
-      if (changes.length > 0 || shouldSyncFiles || shouldSyncOrder) {
+      const appState = latestAppStateRef.current;
+      if (
+        changes.length > 0 ||
+        shouldSyncFiles ||
+        shouldSyncOrder ||
+        appStateChanged
+      ) {
+        latestElementsRef.current = normalizedElements;
         setHasSceneChangesSinceLoad();
         lastLocalChangeAtRef.current = new Date().getTime();
-        // Peers receive refs for any uploaded image (KB, not MB over the
-        // socket); their rehydrate path already fetches `/api/files/...` refs.
-        socketRef.current.emit("element-update", {
-          drawingId,
-          elements: changes.length > 0 ? changes : [],
-          files: shouldSyncFiles
-            ? applyUploadedFileRefs(filesDelta, uploadedRefs.current)
-            : undefined,
-          elementOrder: shouldSyncOrder
-            ? normalizedElements.map((el: any) => el?.id).filter(Boolean)
-            : undefined,
-          userId: socketMeRef.current.id,
-        });
-        const appState = latestAppStateRef.current;
         if (appState) {
           debouncedSave(drawingId, normalizedElements, appState, nextFiles);
           debouncedSavePreview(drawingId);
@@ -120,56 +106,12 @@ export const useEditorBroadcast = ({
       lastSyncedFilesRef,
       latestAppStateRef,
       latestFilesRef,
+      latestElementsRef,
       normalizeImageElementStatus,
       recordElementVersion,
       setHasSceneChangesSinceLoad,
-      socketRef,
-      socketMeRef,
-      uploadedRefs,
     ],
   );
 
-  const broadcastChanges = useCallback(
-    (elements: readonly any[], currentFiles?: Record<string, any>) => {
-      const now = new Date().getTime();
-      const elapsed = now - lastRunAtRef.current;
-
-      if (elapsed >= 100) {
-        if (timeoutRef.current) {
-          window.clearTimeout(timeoutRef.current);
-          timeoutRef.current = null;
-          trailingArgsRef.current = null;
-        }
-        lastRunAtRef.current = now;
-        emitChanges(elements, currentFiles);
-        return;
-      }
-
-      trailingArgsRef.current = [elements, currentFiles];
-      if (timeoutRef.current) return;
-
-      timeoutRef.current = window.setTimeout(() => {
-        timeoutRef.current = null;
-        const args = trailingArgsRef.current;
-        trailingArgsRef.current = null;
-        if (!args) return;
-        lastRunAtRef.current = new Date().getTime();
-        emitChanges(...args);
-      }, 100 - elapsed);
-    },
-    [emitChanges],
-  );
-
-  useEffect(
-    () => () => {
-      if (timeoutRef.current) {
-        window.clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-        trailingArgsRef.current = null;
-      }
-    },
-    [drawingId],
-  );
-
-  return broadcastChanges;
+  return recordLocalChanges;
 };

@@ -1,5 +1,4 @@
 import express from "express";
-import type { Server as SocketIoServer } from "socket.io";
 import { z } from "zod";
 import { Prisma, PrismaClient } from "../../generated/client";
 
@@ -70,11 +69,4 @@ export type DashboardRouteDeps = {
     userId: string,
     drawingId: string,
   ) => Promise<Record<string, any>>;
-  // Re-check every socket in a drawing's room against current access policy and
-  // disconnect collaborators whose access was just revoked. Optional so route
-  // unit tests can omit the socket layer.
-  revalidateDrawingAccess?: (drawingId: string) => Promise<void> | void;
-  // Socket.IO server used to broadcast edits into a drawing's
-  // collaboration room. Optional so route unit tests can omit the socket layer.
-  io?: SocketIoServer;
 };

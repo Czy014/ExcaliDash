@@ -4,9 +4,7 @@ import { Editor } from "../src/pages/Editor";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "../src/api";
-import { reloadAndReconcile } from "../src/pages/editor/reconcileSave";
 import { useEditorPersistence } from "../src/pages/editor/useEditorPersistence";
-import { reconcileElements } from "../src/utils/sync";
 const { route } = vi.hoisted(() => ({ route: { id: "drawing" } }));
 vi.mock("react-router-dom", () => ({
   useParams: () => route,
@@ -14,6 +12,9 @@ vi.mock("react-router-dom", () => ({
   useLocation: vi.fn(),
 }));
 vi.mock("@excalidraw/excalidraw", () => ({ exportToSvg: vi.fn() }));
+vi.mock("../src/context/AuthContext", () => ({
+  useAuth: () => ({ user: null }),
+}));
 vi.mock("../src/api", () => ({
   getDrawing: vi.fn(),
   updateDrawing: vi.fn(),
@@ -55,6 +56,7 @@ const makeHarness = (initial = [element("local")]) => {
     }),
   };
   const refs = {
+    hasSceneChangesSinceLoad: ref(true),
     currentDrawingVersion: ref<number | null>(1),
     debouncedSave: ref(null),
     excalidrawAPI: ref<any>(editor),
@@ -71,6 +73,13 @@ const makeHarness = (initial = [element("local")]) => {
     suspiciousBlankLoad: ref(false),
     uploadedRefs: ref({}),
   };
+  const drafts = {
+    revision: ref(1),
+    acknowledge: vi.fn(),
+    capture: vi.fn(() => {
+      drafts.revision.current += 1;
+    }),
+  };
   let persistence!: ReturnType<typeof useEditorPersistence>;
   function Harness({
     drawingId = "drawing",
@@ -84,6 +93,7 @@ const makeHarness = (initial = [element("local")]) => {
       canEdit,
       refs,
       user: null,
+      drafts,
       normalizeImageElementStatus: (elements = []) => elements,
       resolveSafeSnapshot: (snapshot = []) => ({
         snapshot,
@@ -100,6 +110,7 @@ const makeHarness = (initial = [element("local")]) => {
   return {
     refs,
     editor,
+    drafts,
     Harness,
     setLive: (elements: any[]) => {
       live = elements;
@@ -125,96 +136,33 @@ const mount = async (Harness: React.ComponentType) => {
     renderer = create(<Harness />);
   });
 };
-describe("conflict reconciliation", () => {
-  it("keeps edits and peer additions received while the HTTP read is pending", async () => {
-    const h = makeHarness();
-    const response = deferred<any>();
-    vi.mocked(api.getDrawing).mockReturnValue(response.promise);
-    const reconciling = reloadAndReconcile(
-      h.refs,
-      "drawing",
-      [element("local")],
-      {},
-    );
-    h.setLive([element("local", 3), element("arrived-during-read")]);
-    response.resolve({ version: 4, elements: [element("remote")], files: {} });
-    const merged = await reconciling;
-    expect(merged!.elements).toEqual(
-      expect.arrayContaining([
-        element("local", 3),
-        element("arrived-during-read"),
-        element("remote"),
-      ]),
-    );
-    expect(h.refs.latestElements.current).toEqual(merged!.elements);
-  });
-  it("preserves live geometry changed during an HTTP read even when revision metadata is unchanged", async () => {
-    const original = element("local", 1, { x: 0 });
-    const h = makeHarness([original]);
-    const response = deferred<any>();
-    vi.mocked(api.getDrawing).mockReturnValue(response.promise);
-    const read = reloadAndReconcile(h.refs, "drawing", [original], {});
-    const moved = element("local", 1, { x: 100 });
-    h.setLive([moved]);
-    response.resolve({ version: 2, elements: [original], files: {} });
-    expect((await read)!.elements).toEqual([moved]);
-  });
-  it("keeps a newer deletion tombstone over an old HTTP response", async () => {
-    const h = makeHarness();
-    vi.mocked(api.getDrawing).mockImplementation(async () => {
-      h.setLive([element("local", 3, { isDeleted: true })]);
-      return {
-        version: 4,
-        elements: [element("local", 2)],
-        files: {},
-      } as never;
-    });
-    expect(
-      (await reloadAndReconcile(h.refs, "drawing", [element("local")], {}))!
-        .elements,
-    ).toEqual([element("local", 3, { isDeleted: true })]);
-  });
-});
 describe("serialized saves", () => {
-  it("rebases a queued pre-conflict scene before using the advanced server version", async () => {
+  it("pauses queued and debounced saves after the first conflict without merging or retrying", async () => {
     const h = makeHarness();
     await mount(h.Harness);
     const firstSave = deferred<any>();
     vi.mocked(api.updateDrawing).mockReturnValueOnce(firstSave.promise);
-    vi.mocked(api.getDrawing).mockResolvedValue({
-      version: 2,
-      elements: [element("peer")],
-      files: {},
-    } as never);
-    const first = h.persistence.enqueueSceneSave(
-      "drawing",
-      [element("local")],
-      appState,
-      {},
-    );
+    const first = h.persistence.enqueueSceneSave("drawing", [], appState, {});
     await act(async () => {});
     h.setLive([element("local", 2)]);
-    const second = h.persistence.enqueueSceneSave(
-      "drawing",
-      [element("local", 2)],
-      appState,
-      {},
-    );
+    const second = h.persistence.enqueueSceneSave("drawing", [], appState, {});
+    h.persistence.debouncedSave("drawing", [], appState, {});
     firstSave.reject({ response: { status: 409 } });
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(500);
       await first;
       await second;
+      await vi.advanceTimersByTimeAsync(31000);
     });
-    expect(api.updateDrawing).toHaveBeenLastCalledWith(
-      "drawing",
-      expect.objectContaining({
-        elements: expect.arrayContaining([
-          element("local", 2),
-          element("peer"),
-        ]),
-      }),
-    );
+    expect(api.updateDrawing).toHaveBeenCalledOnce();
+    expect(api.getDrawing).not.toHaveBeenCalled();
+    expect(h.persistence.conflict).toBe(true);
+    expect(h.persistence.unsaved).toBe(true);
+    expect(h.refs.currentDrawingVersion.current).toBe(1);
+    expect(h.refs.latestElements.current).toEqual([element("local", 2)]);
+    expect(h.drafts.acknowledge).not.toHaveBeenCalled();
+    await act(async () => renderer!.unmount());
+    await h.refs.saveQueue.current;
+    expect(api.updateDrawing).toHaveBeenCalledOnce();
   });
   it("finishes the old drawing's newest unsaved edit after direct navigation without borrowing the next drawing's state or permission", async () => {
     const sessions = new Map<string, ReturnType<typeof makeHarness>>();
@@ -308,16 +256,32 @@ describe("serialized saves", () => {
     expect(h.editor.updateScene).not.toHaveBeenCalled();
   });
 });
-describe("concurrent element tie breaking", () => {
-  it("converges independently of delivery order for equal version edits with different nonces", () => {
-    const a = element("shape", 3, { versionNonce: 10, x: 10 });
-    const b = element("shape", 3, { versionNonce: 20, x: 20 });
-    expect(reconcileElements([a], [b])).toEqual(reconcileElements([b], [a]));
+describe("save acknowledgements", () => {
+  it("never sends an unknown version", async () => {
+    const h = makeHarness();
+    await mount(h.Harness);
+    h.refs.currentDrawingVersion.current = null;
+    await h.persistence.enqueueSceneSave("drawing", [], appState, {});
+    expect(api.updateDrawing).not.toHaveBeenCalled();
+    expect(h.persistence.canSave()).toBe(false);
+    expect(h.drafts.acknowledge).not.toHaveBeenCalled();
   });
-  it("retains newer geometry when an older equal-version update arrives", () => {
-    const newer = element("shape", 3, { updated: 10, x: 10 });
-    expect(
-      reconcileElements([newer], [element("shape", 3, { updated: 2, x: 2 })]),
-    ).toEqual([newer]);
+  it("confirms only the captured revision when the user edits during the request", async () => {
+    const h = makeHarness();
+    await mount(h.Harness);
+    const response = deferred<any>();
+    vi.mocked(api.updateDrawing).mockReturnValueOnce(response.promise);
+    const save = h.persistence.enqueueSceneSave("drawing", [], appState, {});
+    await act(async () => {});
+    await act(async () => {
+      h.setLive([element("local", 2)]);
+      h.persistence.markChanged();
+      response.resolve({ version: 2 });
+      await save;
+    });
+    expect(h.drafts.acknowledge).toHaveBeenCalledWith(1);
+    expect(h.refs.hasSceneChangesSinceLoad.current).toBe(true);
+    expect(h.persistence.unsaved).toBe(true);
+    expect(h.refs.currentDrawingVersion.current).toBe(2);
   });
 });

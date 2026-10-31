@@ -11,7 +11,7 @@ import { exportToSvg } from "@excalidraw/excalidraw";
 import debounce from "lodash/debounce";
 import { toast } from "sonner";
 import * as api from "../../api";
-import { reloadAndReconcile } from "./reconcileSave";
+import type { useEditorDrafts } from "./useEditorDrafts";
 import { compressExcalidrawFiles } from "../../utils/imageCompression";
 import { isDefaultPreviewBackground } from "../../utils/previewSvg";
 import {
@@ -30,6 +30,7 @@ class DrawingSaveConflictError extends Error {
 }
 
 type PersistenceRefs = {
+  hasSceneChangesSinceLoad: MutableRefObject<boolean>;
   currentDrawingVersion: MutableRefObject<number | null>;
   debouncedSave: MutableRefObject<
     | ((
@@ -60,6 +61,10 @@ type UseEditorPersistenceParams = {
   canEdit: boolean;
   refs: PersistenceRefs;
   user: unknown;
+  drafts: Pick<
+    ReturnType<typeof useEditorDrafts>,
+    "revision" | "acknowledge" | "capture"
+  >;
   normalizeImageElementStatus: (
     elements?: readonly any[],
     files?: Record<string, any> | null,
@@ -77,15 +82,27 @@ export const useEditorPersistence = ({
   canEdit,
   refs,
   user,
+  drafts,
   normalizeImageElementStatus,
   resolveSafeSnapshot,
 }: UseEditorPersistenceParams) => {
   const historyRestorePendingRef = useRef(false);
+  const conflictRef = useRef(false);
+  const resolutionPendingRef = useRef(false);
+  const pendingSavesRef = useRef(0);
+  const [conflict, setConflict] = useState(false);
+  const [unsaved, setUnsaved] = useState(false);
+  const [resolving, setResolving] = useState(false);
   const drawingSessionRef = useRef({ drawingId: activeDrawingId });
   useLayoutEffect(() => {
     if (drawingSessionRef.current.drawingId !== activeDrawingId) {
       drawingSessionRef.current = { drawingId: activeDrawingId };
       historyRestorePendingRef.current = false;
+      conflictRef.current = false;
+      resolutionPendingRef.current = false;
+      setConflict(false);
+      setUnsaved(false);
+      setResolving(false);
     }
   }, [activeDrawingId]);
   const pendingPreviewSavesRef = useRef(new Set<Promise<void>>());
@@ -115,6 +132,27 @@ export const useEditorPersistence = ({
   const [autosaveFailing, setAutosaveFailing] = useState(false);
   const autosaveFailureCountRef = useRef(0);
 
+  const isSavePaused = () =>
+    conflictRef.current ||
+    resolutionPendingRef.current ||
+    refs.currentDrawingVersion.current === null;
+  const canSave = useCallback(
+    () =>
+      canEditRef.current &&
+      !historyRestorePendingRef.current &&
+      !conflictRef.current &&
+      !resolutionPendingRef.current &&
+      refs.currentDrawingVersion.current !== null,
+    [refs],
+  );
+  const captureDraft = drafts.capture;
+  const markChanged = useCallback(() => {
+    refs.hasSceneChangesSinceLoad.current = true;
+    refs.lastLocalChangeAt.current = Date.now();
+    captureDraft();
+    setUnsaved(true);
+  }, [captureDraft, refs]);
+
   saveDataRef.current = async (
     drawingId: string,
     elements: readonly any[],
@@ -128,12 +166,16 @@ export const useEditorPersistence = ({
       (session.drawingId === undefined || session.drawingId === drawingId) &&
       refs.excalidrawAPI.current === editor;
     if (!canEditRef.current || !drawingId || !isCurrent()) return;
+    if (isSavePaused())
+      throw new DrawingSaveConflictError(
+        "Saving is paused. Resolve the conflict or load a drawing version first.",
+      );
+    const savedRevision = drafts.revision.current;
     try {
       const persistableAppState = getPersistedAppState(
         editor?.getAppState?.() ?? refs.latestAppState.current ?? appState,
       );
-      // Queued arguments may predate a previous conflict merge. Sample the live
-      // scene when the queued save starts, including its deletion tombstones.
+      // Sample the live scene when the queued save starts, including tombstones.
       const liveElements = editor?.getSceneElementsIncludingDeleted?.();
       const candidateElements = Array.isArray(liveElements)
         ? liveElements
@@ -177,6 +219,7 @@ export const useEditorPersistence = ({
       const compressedFilesResult =
         await compressExcalidrawFiles(persistableFiles);
       if (!canEditRef.current || !isCurrent()) return;
+      if (isSavePaused()) throw new DrawingSaveConflictError();
       if (compressedFilesResult.changed) {
         persistableFiles = compressedFilesResult.files;
         if (
@@ -197,7 +240,7 @@ export const useEditorPersistence = ({
           ...persistableFiles,
         };
         // Excalidraw may retain the original blob when addFiles receives an
-        // existing content-derived ID, so compare realtime changes against
+        // existing content-derived ID, so compare local changes against
         // the file map that is still in the editor.
         refs.lastSyncedFiles.current = editorFilesBeforeCompression;
       }
@@ -218,73 +261,38 @@ export const useEditorPersistence = ({
       const normalizedElementsForSave = Array.from(
         normalizeImageElementStatus(persistableElements, filesToPersist),
       );
-      const persistScene = async (
-        attempt: number,
-        elementsToSave: readonly any[],
-        filesToSave: Record<string, any>,
-        sendFiles: boolean,
-      ): Promise<void> => {
-        if (!canEditRef.current || !isCurrent()) return;
-        try {
-          const updated = await api.updateDrawing(drawingId, {
-            elements: Array.from(elementsToSave),
-            appState: persistableAppState,
-            ...(sendFiles ? { files: filesToSave } : {}),
-            version: refs.currentDrawingVersion.current ?? undefined,
-          });
-          if (!canEditRef.current || !isCurrent()) return;
-          if (typeof updated.version === "number") {
-            refs.currentDrawingVersion.current = Math.max(
-              refs.currentDrawingVersion.current ?? 0,
-              updated.version,
-            );
-          }
-          refs.lastPersistedElements.current = elementsToSave;
-          if (sendFiles) {
-            refs.lastPersistedFiles.current = filesToSave;
-          }
-        } catch (err) {
-          if (!isCurrent()) return;
-          if (api.isAxiosError(err) && err.response?.status === 409) {
-            if (attempt < 4) {
-              // Concurrent editors can collide again after reconciliation.
-              // Stagger retries, but always merge against the latest version
-              // rather than overwriting another participant's changes.
-              await new Promise((resolve) =>
-                setTimeout(resolve, 100 * 2 ** attempt + Math.random() * 150),
-              );
-              const reconciled = await reloadAndReconcile(
-                refs,
-                drawingId,
-                elementsToSave,
-                filesToSave,
-                isCurrent,
-              );
-              if (!reconciled) return;
-              await persistScene(
-                attempt + 1,
-                reconciled.elements,
-                reconciled.files,
-                true,
-              );
-              return;
-            }
-            throw new DrawingSaveConflictError();
-          }
-          throw err;
-        }
-      };
-      await persistScene(
-        0,
-        normalizedElementsForSave,
-        filesToPersist,
-        filesChangedSincePersist,
-      );
+      const updated = await api.updateDrawing(drawingId, {
+        elements: normalizedElementsForSave,
+        appState: persistableAppState,
+        ...(filesChangedSincePersist ? { files: filesToPersist } : {}),
+        version: refs.currentDrawingVersion.current!,
+      });
+      if (!canEditRef.current || !isCurrent()) return;
+      if (typeof updated.version !== "number")
+        throw new Error("Save response has no version");
+      refs.currentDrawingVersion.current = updated.version;
+      refs.lastPersistedElements.current = normalizedElementsForSave;
+      if (filesChangedSincePersist)
+        refs.lastPersistedFiles.current = filesToPersist;
+      refs.hasSceneChangesSinceLoad.current =
+        drafts.revision.current !== savedRevision;
+      setUnsaved(refs.hasSceneChangesSinceLoad.current);
+      void drafts.acknowledge(savedRevision);
     } catch (err) {
+      if (!isCurrent()) return;
+      if (api.isAxiosError(err) && err.response?.status === 409) {
+        conflictRef.current = true;
+        setConflict(true);
+        setUnsaved(true);
+        debouncedSave.cancel();
+        debouncedSavePreview.cancel();
+        throw new DrawingSaveConflictError();
+      }
       if (err instanceof DrawingSaveConflictError) {
-        toast.error("Drawing changed in another tab. Refresh to load latest.");
         throw err;
       }
+      setUnsaved(true);
+      setAutosaveFailing(true);
       console.error("Failed to save drawing", err);
       toast.error("Failed to save changes");
       throw err;
@@ -300,15 +308,18 @@ export const useEditorPersistence = ({
       options?: { suppressErrors?: boolean },
     ) => {
       // Restore owns the scene until reload (or failure). Existing saves may
-      // drain, but late broadcast/file timers must not enqueue another save.
+      // drain, but late file timers must not enqueue another save.
       if (historyRestorePendingRef.current) return Promise.resolve();
       const suppressErrors = options?.suppressErrors ?? true;
       const session = drawingSessionRef.current;
+      pendingSavesRef.current += 1;
       refs.saveQueue.current = refs.saveQueue.current
         .catch(() => undefined)
         .then(async () => {
-          if (!saveDataRef.current || drawingSessionRef.current !== session)
+          if (!saveDataRef.current || drawingSessionRef.current !== session) {
+            pendingSavesRef.current -= 1;
             return;
+          }
           try {
             await saveDataRef.current(drawingId, elements, appState, files);
             // A successful save (autosave or explicit) clears the indicator.
@@ -332,6 +343,8 @@ export const useEditorPersistence = ({
               return;
             }
             throw err;
+          } finally {
+            pendingSavesRef.current -= 1;
           }
         });
       return refs.saveQueue.current;
@@ -345,8 +358,7 @@ export const useEditorPersistence = ({
     appState: any,
     files: any,
   ) => {
-    if (!canEditRef.current || !drawingId || historyRestorePendingRef.current)
-      return;
+    if (!canSave() || !drawingId) return;
     const session = drawingSessionRef.current;
     if (session.drawingId !== undefined && session.drawingId !== drawingId)
       return;
@@ -394,6 +406,7 @@ export const useEditorPersistence = ({
       if (
         !canEditRef.current ||
         historyRestorePendingRef.current ||
+        isSavePaused() ||
         drawingSessionRef.current !== session
       )
         return;
@@ -483,8 +496,8 @@ export const useEditorPersistence = ({
   const runHistoryRestore = useCallback(
     async (drawingId: string, restore: () => Promise<unknown>) => {
       if (historyRestorePendingRef.current) return;
-      // Save the live API snapshot before locking, including edits still waiting
-      // in the broadcast throttle. A stale debounce must not replace this backup.
+      if (!canSave()) throw new DrawingSaveConflictError();
+      // Back up the live scene before restoring; a stale debounce cannot replace it.
       debouncedSave.cancel();
       const editor = refs.excalidrawAPI.current;
       if (!editor) throw new Error("Drawing is still loading");
@@ -507,11 +520,42 @@ export const useEditorPersistence = ({
         throw error;
       }
     },
-    [debouncedSave, debouncedSavePreview, enqueueSceneSave, refs],
+    [canSave, debouncedSave, debouncedSavePreview, enqueueSceneSave, refs],
   );
 
   return {
     autosaveFailing,
+    unsaved,
+    conflict,
+    conflictRef,
+    resolutionPendingRef,
+    pendingSavesRef,
+    resolving,
+    canSave,
+    markChanged,
+    enterConflict: () => {
+      conflictRef.current = true;
+      setConflict(true);
+      setUnsaved(true);
+      debouncedSave.cancel();
+      debouncedSavePreview.cancel();
+    },
+    setResolutionPending: (pending: boolean) => {
+      resolutionPendingRef.current = pending;
+      setResolving(pending);
+      if (pending) {
+        debouncedSave.cancel();
+        debouncedSavePreview.cancel();
+      }
+    },
+    resetSaveState: () => {
+      conflictRef.current = false;
+      refs.hasSceneChangesSinceLoad.current = false;
+      setConflict(false);
+      setUnsaved(false);
+      setAutosaveFailing(false);
+      autosaveFailureCountRef.current = 0;
+    },
     historyRestorePendingRef,
     runHistoryRestore,
     debouncedSave,

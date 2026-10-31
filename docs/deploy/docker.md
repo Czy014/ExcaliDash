@@ -1,6 +1,6 @@
 ---
 title: How to Self-host Excalidraw with Docker Compose
-description: Deploy ExcaliDash for self-hosted Excalidraw with saved drawings and collaboration. Configure Docker, HTTPS, persistent storage, backups, and upgrades.
+description: Deploy ExcaliDash for self-hosted Excalidraw with saved drawings and independent editing. Configure Docker, HTTPS, persistent storage, backups, and upgrades.
 ---
 
 <script setup>
@@ -9,7 +9,9 @@ import { setupSlides } from "../.vitepress/theme/screenshot-flows";
 
 # How to self-host Excalidraw with Docker Compose
 
-ExcaliDash gives the Excalidraw editor a self-hosted workspace with saved drawings, collections, real-time collaboration, and version history. This guide deploys the ExcaliDash frontend and backend with a persistent SQLite database. ExcaliDash is an independent project built around Excalidraw.
+Fork deployment is not released yet. The image tags below describe upstream distributions. Build and publish this fork before using these instructions for personal editing.
+
+ExcaliDash gives the Excalidraw editor a self-hosted workspace with saved drawings, collections, local drafts and explicit save conflicts, and version history. This guide deploys the ExcaliDash frontend and backend with a persistent SQLite database. ExcaliDash is an independent project built around Excalidraw.
 
 ## Before you start
 
@@ -38,7 +40,7 @@ docker compose -f docker-compose.prod.yml ps
 docker compose -f docker-compose.prod.yml logs --tail=100
 ```
 
-Create a drawing, make an edit, then close and reopen it to check storage. To check collaboration, share the drawing with a second account with editing permission and open it in a second session. See the [collaboration guide](/guide/collaboration).
+Create a drawing, make an edit, then close and reopen it to check storage. To check multiple pages, edit the same loaded version in two tabs and verify the second save shows a conflict. See [personal editing](/guide/personal-editing).
 
 ## Select an image version
 
@@ -59,7 +61,7 @@ Pin a release for repeatable deployments. Use the same version for both images.
 
 ## Configure HTTPS
 
-Route HTTPS traffic to container port `80` or `8080`, or host port `6767`. Both container ports serve the same application. Existing `6767:80` mappings and reverse proxies targeting port `80` remain supported. The frontend proxies API and real-time traffic to the backend.
+Route HTTPS traffic to container port `80` or `8080`, or host port `6767`. Both container ports serve the same application. Existing `6767:80` mappings and reverse proxies targeting port `80` remain supported. The frontend proxies HTTP API traffic to the backend.
 
 Create `compose.override.yml` with your public origin and the number of trusted proxy hops:
 
@@ -71,7 +73,7 @@ services:
       TRUST_PROXY: "1"
 ```
 
-Replace `https://draw.example.com` with your URL. The hop count must match your proxy chain and your proxies must replace untrusted forwarding headers and forward WebSocket upgrades for `/socket.io/`.
+Replace `https://draw.example.com` with your URL. The hop count must match your proxy chain and your proxies must replace untrusted forwarding headers.
 
 Apply the override:
 
@@ -133,9 +135,9 @@ docker compose -f docker-compose.prod.yml up -d
 
 Check `docker compose -f docker-compose.prod.yml ps` and the service logs. Ensure port `6767` is available and reachable from the machine you are using. `localhost` always means the machine where you open the URL.
 
-### Collaboration does not connect
+### A drawing shows a save conflict
 
-Confirm that your proxy forwards WebSocket upgrades for `/socket.io/` to the frontend and that `FRONTEND_URL` matches the origin you use to open the app. Set `TRUST_PROXY` to match your trusted proxy chain. Check that the invited account has editing permission.
+Another page or device saved a newer version. Keep the local scene, load the latest after confirmation, or save it as a copy. See [personal editing](/guide/personal-editing).
 
 ### Data or backup permission errors
 

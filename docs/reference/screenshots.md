@@ -1,6 +1,6 @@
 ---
-title: "ExcaliDash Screenshots: Dashboard, Editor, and Collaboration"
-description: See ExcaliDash screenshots of the Excalidraw dashboard, collections, editor, real-time collaboration, and tablet and mobile layouts.
+title: "ExcaliDash Screenshots: Dashboard, Editor, and Sharing"
+description: See ExcaliDash screenshots of the Excalidraw dashboard, collections, editor, sharing, and tablet and mobile layouts.
 ---
 
 <script setup>
@@ -9,7 +9,7 @@ import { setupSlides, passwordResetSlides } from "../.vitepress/theme/screenshot
 
 # Screenshots
 
-Explore the ExcaliDash workspace, editor, and real-time collaboration. Select any screenshot to open the full-size image.
+Explore the ExcaliDash workspace, editor, and sharing. Select any screenshot to open the full-size image.
 
 Try toggling dark mode on this page!!
 
@@ -60,18 +60,6 @@ Browse drawing cards and collections on a tablet-sized screen.
 Access the drawing dashboard on a narrow mobile screen.
 
 <ThemeScreenshot light="/images/screenshots/mobile-workspace-light.png" dark="/images/screenshots/mobile-workspace.png" alt="Mobile workspace — Access the drawing dashboard on a narrow mobile screen." width="430" height="932" />
-
-## Live deployment review
-
-Review a deployment diagram together with named cursors and collaborator presence.
-
-<ThemeScreenshot light="/images/collaboration-light.png" dark="/images/collaboration-dark.png" alt="Live deployment review — Review a deployment diagram together with named cursors and collaborator presence." />
-
-## Live pipeline workshop
-
-Collaborate on a larger pipeline diagram with multiple people in the editor.
-
-<ThemeScreenshot light="/images/screenshots/live-pipeline-workshop-light.png" dark="/images/screenshots/live-pipeline-workshop.png" alt="Live pipeline workshop — Collaborate on a larger pipeline diagram with multiple people in the editor." />
 
 ## Fresh instance setup
 

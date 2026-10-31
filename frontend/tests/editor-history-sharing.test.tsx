@@ -48,7 +48,7 @@ vi.mock("../src/api", () => ({
   getDrawingHistory: vi.fn(),
   getDrawingSnapshot: vi.fn(),
   getDrawingSharing: vi.fn(async () => ({ permissions: [], linkShares: [] })),
-  isAxiosError: () => false,
+  isAxiosError: (error: any) => Boolean(error.response),
 }));
 vi.mock("../src/utils/imageCompression", () => ({
   compressExcalidrawFiles: vi.fn(async (files) => ({ files, changed: false })),
@@ -172,12 +172,21 @@ function persistenceHarness() {
     staleEmptySnapshot: false,
     staleNonRenderableSnapshot: false,
   });
+  const drafts = {
+    revision: ref(1),
+    acknowledge: vi.fn(),
+    capture: vi.fn(() => {
+      drafts.revision.current += 1;
+    }),
+  };
   let persistence!: ReturnType<typeof useEditorPersistence>;
   let commands!: ReturnType<typeof useEditorCommands>;
   function Harness() {
     const nextPersistence = useEditorPersistence({
+      drawingId: "drawing",
       canEdit: true,
       user: null,
+      drafts,
       refs,
       normalizeImageElementStatus: (elements = []) => elements,
       resolveSafeSnapshot,
@@ -192,6 +201,7 @@ function persistenceHarness() {
       user: null,
       refs: {
         ...refs,
+        canSave: nextPersistence.canSave,
         historyRestorePending: nextPersistence.historyRestorePendingRef,
         saveData: nextPersistence.saveDataRef,
         savePreview: nextPersistence.savePreviewRef,
@@ -304,6 +314,9 @@ describe("isolated history preview", () => {
     });
     testWindow.dispatchEvent(key);
     await settle();
+    await act(async () => {
+      h.persistence.markChanged();
+    });
     testWindow.dispatchEvent(new Event("pagehide"));
     expect(api.updateDrawing).toHaveBeenCalledWith(
       "drawing",
@@ -330,7 +343,7 @@ describe("isolated history preview", () => {
     expect(h.refs.latestFiles.current).toBe(liveFiles);
   });
 
-  it("cancels preview without overwriting live collaboration changes", async () => {
+  it("cancels preview without overwriting current local changes", async () => {
     const h = persistenceHarness();
     const renderer = await render(<h.Harness />);
     await clickSnapshot(renderer);
@@ -504,6 +517,93 @@ describe("isolated history preview", () => {
   });
 });
 
+describe("paused and failed saves", () => {
+  it("blocks queued, manual, back, preview and unload writes after a conflict", async () => {
+    const h = persistenceHarness();
+    await render(<h.Harness />);
+    let finishSvg!: (svg: any) => void;
+    vi.mocked(exportToSvg).mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishSvg = resolve;
+      }),
+    );
+    const preview = h.persistence.savePreviewRef.current!(
+      "drawing",
+      liveElements,
+      liveAppState,
+      liveFiles,
+    );
+    h.persistence.debouncedSave(
+      "drawing",
+      liveElements,
+      liveAppState,
+      liveFiles,
+    );
+    h.persistence.debouncedSavePreview("drawing");
+    vi.mocked(api.updateDrawing).mockRejectedValueOnce({
+      response: { status: 409 },
+    });
+    await act(async () => {
+      await h.persistence.enqueueSceneSave(
+        "drawing",
+        liveElements,
+        liveAppState,
+        liveFiles,
+      );
+    });
+    expect(h.persistence.conflict).toBe(true);
+    await act(async () => {
+      finishSvg({ outerHTML: "<svg />" });
+      await preview;
+      testWindow.dispatchEvent(
+        Object.assign(new Event("keydown", { cancelable: true }), {
+          ctrlKey: true,
+          key: "s",
+        }),
+      );
+      testWindow.dispatchEvent(new Event("pagehide"));
+      await h.commands.handleBackClick();
+      await h.persistence.enqueueSceneSave(
+        "drawing",
+        liveElements,
+        liveAppState,
+        liveFiles,
+      );
+      await h.persistence.savePreviewRef.current!(
+        "drawing",
+        liveElements,
+        liveAppState,
+        liveFiles,
+      );
+    });
+    await advance(31_000);
+    await act(async () =>
+      renderers.splice(0).forEach((renderer) => renderer.unmount()),
+    );
+    await h.refs.saveQueue.current;
+    expect(api.updateDrawing).toHaveBeenCalledOnce();
+    expect(saveDrawingKeepalive).not.toHaveBeenCalled();
+    expect(h.refs.hasSceneChangesSinceLoad.current).toBe(true);
+  });
+
+  it("keeps network failures unsaved without labeling them a version conflict", async () => {
+    const h = persistenceHarness();
+    await render(<h.Harness />);
+    vi.mocked(api.updateDrawing).mockRejectedValueOnce(new Error("offline"));
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    await act(async () => {
+      await h.commands.handleBackClick();
+    });
+    expect(h.persistence.unsaved).toBe(true);
+    expect(h.persistence.conflict).toBe(false);
+    expect(h.refs.currentDrawingVersion.current).toBe(1);
+    expect(h.refs.hasSceneChangesSinceLoad.current).toBe(true);
+    consoleError.mockRestore();
+  });
+});
+
 describe("sharing placement and chrome", () => {
   it("portals the viewport dismiss layer and anchors the fixed popover to the button", async () => {
     const close = vi.fn();
@@ -565,6 +665,7 @@ describe("sharing placement and chrome", () => {
         canEdit
         autoHideEnabled
         autosaveFailing={false}
+        resolving={false}
         drawingName="Drawing"
         editorContainerRef={ref(null)}
         initialData={{ elements: liveElements }}
@@ -578,9 +679,7 @@ describe("sharing placement and chrome", () => {
         isSceneLoading={false}
         langCode="en"
         loadError={null}
-        me={{ id: "me", name: "Me", color: "red" }}
         newName="Drawing"
-        peers={[]}
         theme="light"
         onBackClick={vi.fn()}
         onCanvasChange={vi.fn()}
@@ -589,7 +688,6 @@ describe("sharing placement and chrome", () => {
         onLibraryChange={vi.fn()}
         onNavigateHome={vi.fn()}
         onNewNameChange={vi.fn()}
-        onPointerUpdate={vi.fn()}
         onRenameBlur={vi.fn()}
         onRenameStart={vi.fn()}
         onRenameSubmit={vi.fn()}

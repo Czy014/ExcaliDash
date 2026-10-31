@@ -1,7 +1,7 @@
 ---
-title: Self-hosted Excalidraw with Collaboration | ExcaliDash
+title: Self-hosted Excalidraw for Personal Editing | ExcaliDash
 titleTemplate: false
-description: Self-host Excalidraw with saved drawings, collections, real-time collaboration, and version history. Deploy ExcaliDash with Docker Compose.
+description: Self-host Excalidraw with saved drawings, collections, local drafts and explicit save conflicts, and version history. Deploy ExcaliDash with Docker Compose.
 layout: home
 pageClass: canvas-home
 markdownStyles: true
@@ -10,7 +10,7 @@ footer: false
 canvasHero:
   name: "ExcaliDash"
   headline: Self-hosted Excalidraw, organized.
-  tagline: Saved drawings, collections, real-time collaboration, and version history. Run your own workspace with Docker Compose.
+  tagline: Saved drawings, collections, local drafts and explicit save conflicts, and version history. Run your own workspace with Docker Compose.
   actions:
     - theme: brand
       text: Self-host with Docker
@@ -24,8 +24,8 @@ canvasFeatures:
     title: Organize
     details: Group drawings into collections. Search and sort your workspace.
   - icon: "02"
-    title: Collaborate
-    details: Edit together in real time. Share drawings and collections.
+    title: Edit independently
+    details: Keep local drafts and resolve save conflicts explicitly.
   - icon: "03"
     title: Self-host
     details: Deploy with Docker Compose using SQLite or PostgreSQL.
@@ -44,23 +44,19 @@ canvasImages:
     light: /images/workspace-light.png
     dark: /images/workspace.png
     alt: ExcaliDash dashboard with drawing previews, collections, and search
-  - label: Collaboration
-    light: /images/collaboration-light.png
-    dark: /images/collaboration-dark.png
-    alt: Four collaborators reviewing a deployment diagram, with live named cursors and presence avatars
 ---
 
 ## Your drawings, on your server
 
-ExcaliDash is an open-source workspace built around the Excalidraw editor. Keep your drawings in a persistent database, organize them into collections, and work together in real time. It is an independent project, not an official Excalidraw product.
+ExcaliDash is an open-source workspace built around the Excalidraw editor. Keep your drawings in a persistent database, organize them into collections, and edit each drawing independently. It is an independent project, not an official Excalidraw product.
 
 ### Self-host Excalidraw with Docker Compose
 
 Run the frontend and backend on your own machine, homelab, or server. The default stack uses SQLite and a persistent Docker volume. Follow the [Excalidraw self-hosting guide](/deploy/docker) for installation, HTTPS, and upgrades.
 
-### Draw together and control access
+### Edit independently and control access
 
-Invite people to drawings or collections, choose viewing or editing permissions, and collaborate with live cursors. Use local accounts or OpenID Connect for sign-in. Read the [collaboration guide](/guide/collaboration) and [authentication setup](/guide/authentication).
+Invite people to drawings or collections, choose viewing or editing permissions, and keep each page's unsaved changes safe. Use local accounts or OpenID Connect for sign-in. Read the [personal editing guide](/guide/personal-editing) and [authentication setup](/guide/authentication).
 
 ### Save, restore, and back up
 
@@ -70,11 +66,11 @@ Drawings are stored on your server so you can return to them from another device
 
 ### What does ExcaliDash add to Excalidraw?
 
-ExcaliDash embeds the Excalidraw editor and adds a dashboard, persistent drawing storage, collections, sharing permissions, collaboration, version history, and account management.
+ExcaliDash embeds the Excalidraw editor and adds a dashboard, persistent drawing storage, collections, sharing permissions, local drafts, version history, and account management.
 
-### Can I collaborate on my own server?
+### Can I open a drawing in multiple tabs?
 
-Yes. The ExcaliDash backend handles real-time collaboration. Your reverse proxy must forward WebSocket connections; the [Docker guide](/deploy/docker#configure-https) explains the setup.
+Yes. Each page saves with its loaded version. A stale page keeps its draft and offers explicit conflict resolution. See [personal editing](/guide/personal-editing).
 
 ### Does restarting Docker erase my drawings?
 
