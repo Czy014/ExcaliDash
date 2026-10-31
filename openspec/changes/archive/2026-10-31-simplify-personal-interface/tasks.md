@@ -17,7 +17,7 @@
 
 ## 3. 收尾
 
-- [ ] 3.1 记录 Validation，归档并同步规格，提交推送独立分支；不合入 main。
+- [x] 3.1 记录 Validation，归档并同步规格，提交推送独立分支；不合入 main。
 
 ## Validation
 
@@ -40,6 +40,9 @@
   通过：独立测试账户成功修改邮箱、使用新邮箱登录、拒绝错误当前密码、成功改密、
   自动退出并使用新密码登录。没有为该测试修改应用的认证行为。
 - `git diff --check`、change 严格校验和归档前全量 OpenSpec 校验 4/4 通过。
+- 实现提交 `d71a8de`、归档提交 `f8acdad` 已推送 `origin/feat/personal-interface`。
+  归档前后 5 个 change 工件逐字节一致，新增的 2 条 requirement 正文同步一致；归档后
+  全量严格校验 3/3 通过。main 仍为 `0f9be2d`，没有合入或推送 main。
 
 ### 未验证及边界
 
