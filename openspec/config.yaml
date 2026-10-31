@@ -1,0 +1,32 @@
+schema: spec-driven
+
+context: |
+  Language: zh
+  All artifact prose must be written in zh.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+  本仓库为独立 fork Czy014/ExcaliDash，上游为 ZimengXiong/ExcaliDash。
+  本地 OpenSpec 根目录为本仓库；不使用父目录或 Homebase 的 openspec/。
+  初始化基线是上游提交 0f9be2d8649be7650e6bee2844739c584fa76c35，VERSION 为 0.6.7。
+  基线仍有实时协作；个人绘图库方向的行为变更须通过 change 实施，不能写成已实现。
+  frontend/ 使用 React 18、TypeScript、Vite、React Router 和官方 @excalidraw/excalidraw。
+  backend/ 使用 TypeScript、Express 5、Prisma；生产 keeper 当前使用 SQLite，上游也支持 PostgreSQL。
+  单元和集成测试使用 Vitest，浏览器测试使用 e2e/ 下的 Playwright。
+  Node.js 要求 >=24.22.1，项目声明 npm 10.9.2，依赖使用现有 package-lock.json。
+  已有能力包括绘图和分类管理、图片、素材库、导入导出、历史记录及认证和分享。
+  Homebase 是独立部署管理项目，本仓库不依赖 Homebase 核心；生产集成在 Homebase 的 Draw 插件中。
+  用户已确定：移除实时协作；同图允许多页面打开，用版本号防止覆盖；冲突后暂停自动保存，保留本地草稿，提供加载最新或另存副本。
+  所有工作使用独立分支，main 只用于集成已验收修改。保留上游版权和 LGPLv3 许可证。
+
+rules:
+  proposal:
+    - 说明实际问题、保留的能力和不在本次范围内的工作；只列出本仓库拥有的修改。
+  design:
+    - 用已检查的源码路径说明现状和实现位置，区分当前行为与拟议行为。
+    - 涉及保存时说明版本竞争、排队请求、离开页面、本地草稿、图片和失败恢复；复用现有结构。
+    - 不接入生产数据进行测试，不把数据库迁移、部署或接口变更隐含在其他任务中。
+  specs:
+    - 每条 requirement 使用 SHALL 或 MUST，并至少提供一个可验证的 WHEN/THEN scenario。
+    - 主规格只记录已有能力；待实施的行为写在 change delta 中，不提前同步或归档。
+  tasks:
+    - 按依赖顺序列出可勾选的实现和验证任务，使用仓库真实存在的命令。
+    - 未实施的任务保持未勾选；Validation 区分规格校验、测试、构建和生产验证。
