@@ -8,7 +8,7 @@
 
 ### Requirement: Editing SHALL work without real-time collaboration
 
-编辑器 SHALL 通过 HTTP 读取和保存场景，不建立实时协作连接，不显示其他页面的光标或在线成员，不接收其他页面的实时场景变化。服务端 MUST NOT 提供 Socket.IO 协作入口。绘图库、素材库、图片、导入导出、历史、认证和既有分享权限 SHALL 保持可用。
+编辑器 SHALL 通过 HTTP 读取和保存场景，不建立实时协作连接，不显示其他页面的光标或在线成员，不接收其他页面的实时场景变化。服务端 MUST NOT 提供 Socket.IO 协作入口。绘图库、素材库、图片、导入导出、历史、单用户运行方式和公开链接 SHALL 保持可用。
 
 #### Scenario: Edit without a collaboration transport
 
@@ -17,7 +17,7 @@
 
 #### Scenario: Preserve shared access checks
 
-- **WHEN** 只读分享访问者尝试修改绘图
+- **WHEN** 访问者尝试修改自己无编辑权限的历史绘图
 - **THEN** HTTP 保存仍被权限检查拒绝，不因协作功能移除而获得编辑权限
 
 ### Requirement: Save conflicts SHALL require an explicit resolution
@@ -81,8 +81,8 @@
 
 个人绘图库前端 SHALL 不展示 Beta 标识、用户头像、个人资料入口或个人资料页面，
 并 SHALL 不再提供「与我共享」虚拟集合视图。侧栏工具 SHALL 使用与用户身份无关的
-工作区标签，保留紧凑和展开方式下的回收站、设置以及适用的管理与退出操作。
-分享对话框 SHALL 使用名称和权限文本，不展示头像。
+工作区标签，保留紧凑和展开方式下的回收站和设置；不提供账户、管理员和退出操作。
+分享对话框 SHALL 只提供公开链接设置，不提供按用户授权。
 
 #### Scenario: Browse a personal library on desktop and mobile
 
@@ -92,20 +92,4 @@
 #### Scenario: Keep authorized sharing operations
 
 - **WHEN** 用户打开分享对话框或通过既有分享链接访问绘图
-- **THEN** 名称、权限控制和链接访问保持可用，隐藏头像不改变授权或授予写入能力
-
-### Requirement: Account security SHALL remain available in Settings
-
-启用认证时，前端 SHALL 在设置页提供原有的登录邮箱和密码管理，保留当前密码确认、
-错误反馈、强制重置及修改密码后退出。认证关闭时 SHALL 不展示账户身份表单；
-OIDC 强制模式 SHALL 不提供本地密码修改。
-
-#### Scenario: Change login credentials safely
-
-- **WHEN** 本地认证用户在设置页修改邮箱或密码
-- **THEN** 当前密码错误时请求被拒绝，成功后使用新邮箱或密码能够登录，密码修改后退出
-
-#### Scenario: Use the library with authentication disabled
-
-- **WHEN** 认证关闭且用户打开设置
-- **THEN** 设置仍可使用，不展示邮箱、密码或个人资料表单
+- **THEN** 公开链接设置保持可用，不展示添加人员或按用户授权入口

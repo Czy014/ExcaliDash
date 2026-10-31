@@ -19,8 +19,9 @@
 - `npm --prefix e2e run check`：通过；`node --test scripts/lab-frontend-ports.test.mjs`：4 项通过。
 - `npm --prefix e2e test -- --reporter=line`：75 项通过；1 项需显式启用的 UI 截图采集场景跳过。所有场景使用本机隔离测试数据库和新浏览器上下文，覆盖认证 URL 回到资料库、账户接口零请求、主题刷新保留、链接设置、图片、历史、分类及多标签冲突。
 - `npm run check`、`npm run build`、`npm run docs:build`、`git diff --check`：通过。认证依赖和已失效脚本/截图移除，保留被文档组件引用的 `image-versions.json`。
-- `openspec validate --all --strict --no-interactive`：归档前 4/4 通过。
+- `openspec validate --all --strict --no-interactive`：归档前、后均 4/4 通过；已同步 `personal-editing` 并新增 `single-user-runtime`。
 - 以 `252cd9a` 为固定点完成 Standards / Spec 两轴只读审查：规格轴无发现；规范轴指出两处遗漏的账户功能说明和 Compose 文件名，已修正，无未解决的阻断项。
 - `backend/prisma/` 的 schema 和迁移无修改；未接入 keeper 数据、上传目录或密钥，未执行生产数据迁移。
+- 实现提交 `405fbcd`；change 在全部任务完成后归档。
 
 未验证：keeper 部署及其反向代理、Docker 镜像构建/启动、真实 PostgreSQL/S3；截图采集未运行。所有访问者使用同一工作区身份，公开链接不提供与工作区 owner 隔离的访客权限；历史其他用户的私有绘图不自动合并。
