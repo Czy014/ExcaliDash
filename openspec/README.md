@@ -21,6 +21,8 @@
 
 [2026-10-31-remove-authentication](changes/archive/2026-10-31-remove-authentication/proposal.md) 删除前后端认证、用户邀请和账户管理，只支持 `AUTH_MODE=disabled`；偏好保存在浏览器，历史数据库表保留。实现提交 `405fbcd`，本地后端 222、前端单元 47、浏览器 75 项通过；尚未部署本次变更。
 
+[2026-10-31-simplify-single-user-runtime](changes/archive/2026-10-31-simplify-single-user-runtime/proposal.md) 删除请求用户与 principal 适配层、重复认证分支、列表缓存用户分区及无调用审计读取；统一使用固定工作区并集中初始化。实现提交 `66916e1` 已合入并推送 `main`，后端 220、前端单元 47、浏览器 75 项通过，1 项可选截图跳过；历史数据库结构、图片路径与本地草稿键保留，尚未部署。
+
 生产部署、Homebase 接入及 `/draw/` 前缀兼容由 Homebase 的独立 change 负责。
 
 ## 工作方式

@@ -10,7 +10,7 @@
 
 ## 3. Integration
 
-- [ ] 3.1 提交实现，同步规格并归档，快进合入 main 后推送 origin。
+- [x] 3.1 提交实现，同步规格并归档，快进合入 main 后推送 origin。
 
 ## Validation
 
@@ -21,6 +21,8 @@
 - `npm run test:e2e`：Chromium 75 项通过；1 项可选 UI 截图场景因未设置 `UI_REVIEW_SCREENSHOTS=true` 跳过。
 - `npm run check`、`npm run build`、`npm run docs:build`、`git diff --check` 通过。
 - `openspec validate --all --strict --no-interactive`：归档前 5/5 通过。
+- 实现提交 `66916e1` 已快进合入 `main` 并推送 `origin/main`；规格已同步，change 已归档。
+- 归档后 `openspec validate --all --strict --no-interactive`：4/4 通过，`openspec list` 没有进行中的 change。
 - PostgreSQL 回归脚本已同步固定工作区夹具，`node --check scripts/verify-postgres-file-races.cjs` 与格式检查通过。
 - 源码、脚本扫描没有残留 `req.user`、`DrawingPrincipal`、`getRequestPrincipal`、`getAuditLogs` 或旧认证适配器；数据库 schema、迁移与草稿存储键没有修改。
 - 未运行：真实 PostgreSQL 并发脚本、真实 S3 集成、Docker 镜像构建、keeper 部署与生产数据升级验证；没有访问 keeper 生产数据。
