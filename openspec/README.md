@@ -24,10 +24,11 @@
 ```sh
 openspec context --json
 openspec list
-openspec status --change remove-realtime-collaboration
 openspec validate --all --strict --no-interactive
 ```
 
 `context` 返回的 `root.path` 应是当前 ExcaliDash 仓库。详细约定见 [AGENTS.md](../AGENTS.md)，工件规则见 [config.yaml](config.yaml)。
 
-当前只建立规格，不构建或发布镜像、不部署 keeper。Homebase 的现有 Draw 配置仍使用 `0.6.6`；未来接入 fork 时需要独立验证版本和数据兼容性。
+应用规格与 Homebase 的生产集成分别追踪；部署记录见 Homebase 的
+`integrate-personal-editing-draw` change。
+bug 与待办的审查读取方式见 [issue tracker 配置](../docs/agents/issue-tracker.md)。
