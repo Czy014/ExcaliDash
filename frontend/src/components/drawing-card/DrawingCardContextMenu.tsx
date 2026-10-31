@@ -18,7 +18,6 @@ interface DrawingCardContextMenuProps {
   collections: Collection[];
   position: { x: number; y: number };
   isTrash: boolean;
-  isShared: boolean;
   storageAvailable: boolean;
   isExporting: boolean;
   exportError: string | null;
@@ -40,7 +39,6 @@ export const DrawingCardContextMenu: React.FC<DrawingCardContextMenuProps> = ({
   collections,
   position,
   isTrash,
-  isShared,
   storageAvailable,
   isExporting,
   exportError,
@@ -92,70 +90,63 @@ export const DrawingCardContextMenu: React.FC<DrawingCardContextMenuProps> = ({
         style={{ top: position.y, left: position.x }}
         onClick={(e) => e.stopPropagation()}
       >
-        {!isTrash &&
-        (!isShared ||
-          drawing.accessLevel === "edit" ||
-          drawing.accessLevel === "owner") ? (
+        {!isTrash ? (
           <button onClick={onRename} className="ui-menu-item">
             <PenTool size={14} /> Rename
           </button>
         ) : null}
-        {!isShared ? (
-          <div
-            className="relative"
-            onMouseEnter={openSubmenu}
-            onMouseLeave={scheduleSubmenuClose}
-          >
-            <button className="ui-menu-item justify-between">
-              <span className="flex items-center gap-2">
-                <FolderInput size={14} /> Move to...
-              </span>
-              <ArrowRight size={12} />
-            </button>
-            {showMoveSubmenu && (
-              <>
-                {/* Safe-triangle bridge: invisible hover area connecting the
+        <div
+          className="relative"
+          onMouseEnter={openSubmenu}
+          onMouseLeave={scheduleSubmenuClose}
+        >
+          <button className="ui-menu-item justify-between">
+            <span className="flex items-center gap-2">
+              <FolderInput size={14} /> Move to...
+            </span>
+            <ArrowRight size={12} />
+          </button>
+          {showMoveSubmenu && (
+            <>
+              {/* Safe-triangle bridge: invisible hover area connecting the
                     row to its submenu so diagonal mouse moves don't close it. */}
-                <div
-                  className="absolute left-full top-0 z-40 h-full w-3"
-                  onMouseEnter={openSubmenu}
+              <div
+                className="absolute left-full top-0 z-40 h-full w-3"
+                onMouseEnter={openSubmenu}
+              />
+              <div
+                className="ui-menu absolute left-full -top-1 z-50 ml-1.5 max-h-64 w-48 overflow-y-auto"
+                onMouseEnter={openSubmenu}
+                onMouseLeave={scheduleSubmenuClose}
+              >
+                <CollectionMoveOptions
+                  collections={collections}
+                  currentCollectionId={drawing.collectionId}
+                  drawingId={drawing.id}
+                  onMoveToCollection={onMoveToCollection}
+                  onDone={onClose}
+                  optionClassName="ui-menu-item justify-between"
+                  selectedClassName="ui-menu-item-selected"
+                  unselectedClassName=""
+                  checkSize={12}
                 />
-                <div
-                  className="ui-menu absolute left-full -top-1 z-50 ml-1.5 max-h-64 w-48 overflow-y-auto"
-                  onMouseEnter={openSubmenu}
-                  onMouseLeave={scheduleSubmenuClose}
-                >
-                  <CollectionMoveOptions
-                    collections={collections}
-                    currentCollectionId={drawing.collectionId}
-                    drawingId={drawing.id}
-                    onMoveToCollection={onMoveToCollection}
-                    onDone={onClose}
-                    optionClassName="ui-menu-item justify-between"
-                    selectedClassName="ui-menu-item-selected"
-                    unselectedClassName=""
-                    checkSize={12}
-                  />
-                </div>
-              </>
-            )}
-          </div>
-        ) : null}
-        {!isShared ? (
-          <>
-            <div className="ui-menu-separator" />
-            <button
-              onClick={() => {
-                onDuplicate(drawing.id);
-                onClose();
-              }}
-              className="ui-menu-item"
-            >
-              <Copy size={14} /> Duplicate
-            </button>
-          </>
-        ) : null}
-        {!isShared && storageAvailable ? (
+              </div>
+            </>
+          )}
+        </div>
+        <>
+          <div className="ui-menu-separator" />
+          <button
+            onClick={() => {
+              onDuplicate(drawing.id);
+              onClose();
+            }}
+            className="ui-menu-item"
+          >
+            <Copy size={14} /> Duplicate
+          </button>
+        </>
+        {storageAvailable ? (
           <>
             <button onClick={onManageStorage} className="ui-menu-item">
               <HardDrive size={14} /> Manage storage
@@ -180,20 +171,18 @@ export const DrawingCardContextMenu: React.FC<DrawingCardContextMenuProps> = ({
             {exportError}
           </div>
         )}
-        {!isShared ? (
-          <>
-            <div className="ui-menu-separator" />
-            <button
-              onClick={() => {
-                onDelete(drawing.id);
-                onClose();
-              }}
-              className="ui-menu-item ui-menu-item-danger"
-            >
-              <Trash2 size={14} /> Delete
-            </button>
-          </>
-        ) : null}
+        <>
+          <div className="ui-menu-separator" />
+          <button
+            onClick={() => {
+              onDelete(drawing.id);
+              onClose();
+            }}
+            className="ui-menu-item ui-menu-item-danger"
+          >
+            <Trash2 size={14} /> Delete
+          </button>
+        </>
       </div>
     </div>,
     document.body,

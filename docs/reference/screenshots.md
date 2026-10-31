@@ -4,7 +4,7 @@ description: See ExcaliDash screenshots of the Excalidraw dashboard, collections
 ---
 
 <script setup>
-import { setupSlides, passwordResetSlides } from "../.vitepress/theme/screenshot-flows";
+import { setupSlides } from "../.vitepress/theme/screenshot-flows";
 </script>
 
 # Screenshots
@@ -67,36 +67,6 @@ Follow the real setup flow, including the initially empty workspace and first bl
 
 <ScreenshotCarousel label="Complete fresh-instance setup" :slides="setupSlides" />
 
-## Create an account
-
-Register a local account when self-registration is enabled.
-
-<ThemeScreenshot light="/images/screenshots/registration-light.png" dark="/images/screenshots/registration.png" alt="Create an account — Register a local account when self-registration is enabled." />
-
-## Sign in
-
-Sign in with a local email address and password.
-
-<ThemeScreenshot light="/images/screenshots/signin-light.png" dark="/images/screenshots/signin.png" alt="Sign in — Sign in with a local email address and password." />
-
-## Reset your password
-
-Follow the request, email-link, new-password, and success screens.
-
-<ScreenshotCarousel label="Password reset walkthrough" :slides="passwordResetSlides" />
-
-## Drawing sharing
-
-Open Share to invite accounts and manage access.
-
-<ThemeScreenshot light="/images/screenshots/share-drawing-light.png" dark="/images/screenshots/share-drawing.png" alt="Drawing sharing — Open Share to invite accounts and manage access." />
-
-## Collection sharing
-
-Open Share Collection from the sidebar context menu.
-
-<ThemeScreenshot light="/images/screenshots/share-collection-light.png" dark="/images/screenshots/share-collection.png" alt="Collection sharing — Open Share Collection from the sidebar context menu." />
-
 ## Link access
 
 Open the link-access choices in the drawing sharing controls.
@@ -108,18 +78,6 @@ Open the link-access choices in the drawing sharing controls.
 Select a snapshot in Version History to preview and restore it.
 
 <ThemeScreenshot light="/images/screenshots/drawing-history-light.png" dark="/images/screenshots/drawing-history.png" alt="Drawing history — Select a snapshot in Version History to preview and restore it." />
-
-## Administrator controls
-
-Manage registration settings and local users.
-
-<ThemeScreenshot light="/images/screenshots/admin-light.png" dark="/images/screenshots/admin.png" alt="Administrator controls — Manage registration settings and local users." />
-
-## Create a user in Admin
-
-Open New User to create an account as an administrator.
-
-<ThemeScreenshot light="/images/screenshots/new-user-light.png" dark="/images/screenshots/new-user.png" alt="Create a user in Admin — Open New User to create an account as an administrator." />
 
 ## Workspace settings
 

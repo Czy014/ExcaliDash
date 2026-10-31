@@ -19,10 +19,6 @@ export type DrawingRouteContext = DashboardRouteDeps & {
   ) => Promise<DrawingPrincipal | null>;
   resolveDefaultTtlMs: (permission: "view" | "edit") => number;
   resolveMaxTtlMs: () => number;
-  respondWithAuthErrorIfPresent: (
-    req: express.Request,
-    res: express.Response,
-  ) => boolean;
   cleanupS3FilesForDrawing: (
     drawingId: string,
     userId: string,
@@ -53,18 +49,6 @@ export const createDrawingRouteContext = (
       : config.linkShare.viewDefaultTtlMs;
 
   const resolveMaxTtlMs = (): number => config.linkShare.maxTtlMs;
-
-  const respondWithAuthErrorIfPresent = (
-    req: express.Request,
-    res: express.Response,
-  ): boolean => {
-    if (!req.authError) return false;
-    res.status(401).json({
-      error: "Unauthorized",
-      message: "Invalid or expired token",
-    });
-    return true;
-  };
 
   const cleanupS3FilesForDrawing = async (
     drawingId: string,
@@ -195,7 +179,6 @@ export const createDrawingRouteContext = (
     getRequestPrincipal,
     resolveDefaultTtlMs,
     resolveMaxTtlMs,
-    respondWithAuthErrorIfPresent,
     cleanupS3FilesForDrawing,
     cloneS3FileReferences,
   };

@@ -51,7 +51,7 @@ export const registerExcalidashImportRoutes = (
   const {
     app,
     prisma,
-    requireAuth,
+    workspace,
     asyncHandler,
     upload,
     uploadDir,
@@ -69,7 +69,7 @@ export const registerExcalidashImportRoutes = (
   } = deps;
   app.post(
     "/import/excalidash/verify",
-    requireAuth,
+    workspace,
     upload.single("archive"),
     asyncHandler(async (req, res) => {
       if (!req.user) return res.status(401).json({ error: "Unauthorized" });
@@ -196,7 +196,7 @@ export const registerExcalidashImportRoutes = (
   );
   app.post(
     "/import/excalidash",
-    requireAuth,
+    workspace,
     upload.single("archive"),
     asyncHandler(async (req, res) => {
       if (!req.user) return res.status(401).json({ error: "Unauthorized" });

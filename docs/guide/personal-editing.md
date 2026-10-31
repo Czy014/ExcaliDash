@@ -26,4 +26,4 @@ A page with no unsaved edits, queued saves, conflicts or recovery offers checks 
 
 ## Scope of this fork
 
-The drawing library, collections, trash, images, assets, import/export, history, authentication and sharing permissions remain. Sharing grants access through HTTP; it does not enable simultaneous live editing. The first personal editing change does not change the database model or deploy to Homebase.
+The drawing library, collections, trash, images, assets, import/export, history and public links remain. All visitors use a single workspace identity without sign-in. Public links do not isolate visitors from that identity; see [single-user access](/guide/authentication). Sharing does not enable simultaneous live editing.

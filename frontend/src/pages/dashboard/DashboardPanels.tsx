@@ -1,6 +1,6 @@
 import React from "react";
 import clsx from "clsx";
-import { AlertTriangle, Folder, Inbox, Loader2, Trash2 } from "lucide-react";
+import { Folder, Inbox, Loader2, Trash2 } from "lucide-react";
 import { DrawingCard } from "../../components/DrawingCard";
 import type { Collection, DrawingSummary } from "../../types";
 
@@ -49,31 +49,6 @@ export const DragPreview: React.FC<DragPreviewProps> = ({ drawings }) => (
   </div>
 );
 
-type ViewerActionToastProps = {
-  message: string | null;
-};
-
-export const ViewerActionToast: React.FC<ViewerActionToastProps> = ({
-  message,
-}) => {
-  if (!message) return null;
-
-  return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
-      <div className="flex items-center gap-3 px-5 py-3 bg-amber-50 dark:bg-amber-900/30 border-2 border-amber-500 rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
-        <AlertTriangle
-          size={18}
-          className="text-amber-600 dark:text-amber-400 shrink-0"
-          strokeWidth={3}
-        />
-        <span className="text-sm font-black text-amber-900 dark:text-amber-200">
-          {message}
-        </span>
-      </div>
-    </div>
-  );
-};
-
 type FileDropOverlayProps = {
   viewTitle: string;
 };
@@ -104,8 +79,6 @@ type DrawingsGridProps = {
   isLoading: boolean;
   isDraggingFile: boolean;
   isTrashView: boolean;
-  isSharedCollection: boolean;
-  currentCollection?: Collection;
   onClearSearch: () => void;
   onToggleSelection: (id: string, event: React.MouseEvent) => void;
   onRename: (id: string, name: string) => void;
@@ -126,8 +99,6 @@ export const DrawingsGrid: React.FC<DrawingsGridProps> = ({
   isLoading,
   isDraggingFile,
   isTrashView,
-  isSharedCollection,
-  currentCollection,
   onClearSearch,
   onToggleSelection,
   onRename,
@@ -193,19 +164,13 @@ export const DrawingsGrid: React.FC<DrawingsGridProps> = ({
         </div>
       ) : (
         drawings.map((drawing) => {
-          const cardDrawing =
-            isSharedCollection && currentCollection?.sharedRole
-              ? { ...drawing, accessLevel: currentCollection.sharedRole }
-              : drawing;
           return (
             <DrawingCard
               key={drawing.id}
-              drawing={cardDrawing}
+              drawing={drawing}
               collections={collections}
               isSelected={selectedIds.has(drawing.id)}
               isTrash={isTrashView}
-              isSharedCollection={isSharedCollection}
-              isShared={isSharedCollection}
               onToggleSelection={(event) =>
                 onToggleSelection(drawing.id, event)
               }

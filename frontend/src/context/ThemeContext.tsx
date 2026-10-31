@@ -13,9 +13,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  // Server-backed via the shared preferences context (no-clobber-on-first-mount
-  // and refetch-on-user-change live there); this wrapper only owns the DOM side
-  // effects for the resolved theme.
+  // The preferences context persists the theme; this wrapper updates the DOM.
   const [theme, setTheme] = usePreference("theme", "light");
 
   useEffect(() => {

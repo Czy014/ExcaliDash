@@ -2,7 +2,6 @@ import * as api from "../api";
 import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { getInitialLangCode } from "../components/LanguageSelector";
-import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { usePreference } from "../context/PreferencesContext";
 import { useEditorChrome } from "./editor/useEditorChrome";
@@ -30,8 +29,7 @@ export const Editor: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   // Keep a departing drawing's queue and refs alive for its unmount flush,
   // while the next drawing starts with its own scene, version and permissions.
-  const { user } = useAuth();
-  return <ExcalidrawEditor key={`${user?.id ?? "anonymous"}:${id}`} />;
+  return <ExcalidrawEditor key={id} />;
 };
 
 const ExcalidrawEditor: React.FC = () => {
@@ -40,7 +38,6 @@ const ExcalidrawEditor: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
-  const { user } = useAuth();
   const [accessLevel, setAccessLevel] = useState<
     "none" | "view" | "edit" | "owner"
   >("none");
@@ -132,7 +129,7 @@ const ExcalidrawEditor: React.FC = () => {
     latestFiles: latestFilesRef,
     uploadedRefs: uploadedFileRefsRef,
   });
-  useLibraryImportFromUrl({ excalidrawAPIRef: excalidrawAPI, isReady, user });
+  useLibraryImportFromUrl({ excalidrawAPIRef: excalidrawAPI, isReady });
   useEditorGridStep({ excalidrawAPI, isReady, gridStep });
   const persistenceRefs = React.useMemo(
     () => ({
@@ -157,14 +154,13 @@ const ExcalidrawEditor: React.FC = () => {
   );
   const drafts = useEditorDrafts({
     drawingId: id,
-    account: user?.id ?? "anonymous",
+    account: "anonymous",
     refs: persistenceRefs,
   });
   const persistence = useEditorPersistence({
     drawingId: id,
     canEdit,
     refs: persistenceRefs,
-    user,
     drafts,
     normalizeImageElementStatus,
     resolveSafeSnapshot,
@@ -187,7 +183,6 @@ const ExcalidrawEditor: React.FC = () => {
   const recordLocalChanges = useEditorLocalChanges({
     drawingId: id,
     excalidrawAPI,
-    lastLocalChangeAtRef,
     lastSyncedElementOrderSigRef,
     lastSyncedFilesRef,
     latestAppStateRef,
@@ -198,7 +193,7 @@ const ExcalidrawEditor: React.FC = () => {
     hasElementChanged,
     normalizeImageElementStatus,
     recordElementVersion,
-    setHasSceneChangesSinceLoad: markChanged,
+    markChanged,
     latestElementsRef,
   });
   const { setExcalidrawAPI } = useEditorSceneApi({
@@ -234,7 +229,6 @@ const ExcalidrawEditor: React.FC = () => {
   );
   const { invalidateFileLoads } = useEditorSceneLoader({
     id,
-    user,
     location,
     navigate,
     refs: sceneLoaderRefs,
@@ -264,15 +258,12 @@ const ExcalidrawEditor: React.FC = () => {
   });
   const canvasHandlerRefs = React.useMemo(
     () => ({
-      debouncedSave: debouncedSaveRef,
       excalidrawAPI,
       hasHydratedInitialScene,
-      hasSceneChangesSinceLoad: hasSceneChangesSinceLoadRef,
       initialSceneElements: initialSceneElementsRef,
       isBootstrappingScene,
       isSyncing,
       isUnmounting,
-      lastLocalChangeAt: lastLocalChangeAtRef,
       latestAppState: latestAppStateRef,
       latestElements: latestElementsRef,
       latestFiles: latestFilesRef,
@@ -333,7 +324,6 @@ const ExcalidrawEditor: React.FC = () => {
     setIsRenaming,
     setIsSavingOnLeave,
     setNewName,
-    user,
   });
 
   return (

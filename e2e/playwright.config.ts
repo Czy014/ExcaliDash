@@ -5,8 +5,6 @@ const BACKEND_PORT = 28000;
 const FRONTEND_URL =
   process.env.BASE_URL || `http://127.0.0.1:${FRONTEND_PORT}`;
 const BACKEND_URL = process.env.API_URL || `http://127.0.0.1:${BACKEND_PORT}`;
-const AUTHENTICATED = process.env.E2E_AUTH === "true";
-const mode = AUTHENTICATED ? "authenticated" : "anonymous";
 const frontendRuntimePort = new URL(FRONTEND_URL).port || "80";
 const backendRuntimePort = new URL(BACKEND_URL).port || "80";
 // Share resolved URLs with setup and API helpers, including custom local ports.
@@ -23,14 +21,8 @@ process.env.API_URL = BACKEND_URL;
  */
 export default defineConfig({
   testDir: "./tests",
-  testMatch: AUTHENTICATED
-    ? ["**/auth-workflows.spec.ts", "**/ui-review.spec.ts"]
-    : "**/*.spec.ts",
-  testIgnore: AUTHENTICATED
-    ? []
-    : ["**/auth-workflows.spec.ts", "**/ui-review.spec.ts"],
-
-  globalSetup: AUTHENTICATED ? "./global-setup-auth" : "./global-setup",
+  testMatch: "**/*.spec.ts",
+  globalSetup: "./global-setup",
 
   // The suite uses one backend SQLite database and performs broad cleanup by
   // naming convention, so running tests concurrently creates cross-test leaks.
@@ -47,13 +39,12 @@ export default defineConfig({
     [
       "html",
       {
-        outputFolder:
-          process.env.PLAYWRIGHT_REPORT_DIR || `playwright-report/${mode}`,
+        outputFolder: process.env.PLAYWRIGHT_REPORT_DIR || "playwright-report",
       },
     ],
   ],
 
-  outputDir: process.env.PLAYWRIGHT_OUTPUT_DIR || `test-results/${mode}`,
+  outputDir: process.env.PLAYWRIGHT_OUTPUT_DIR || "test-results",
 
   timeout: 60000,
 
@@ -98,17 +89,14 @@ export default defineConfig({
             stdout: "pipe",
             stderr: "pipe",
             env: {
-              DATABASE_URL: AUTHENTICATED
-                ? "file:./auth-e2e.db"
-                : "file:./e2e-test.db",
+              DATABASE_URL: "file:./e2e-test.db",
               PORT: backendRuntimePort,
               FRONTEND_URL,
-              AUTH_MODE: AUTHENTICATED ? "local" : "disabled",
+              AUTH_MODE: "disabled",
               S3_BUCKET: "",
               CSRF_MAX_REQUESTS: "100000",
               RATE_LIMIT_MAX_REQUESTS: "100000",
               CSRF_SECRET: "e2e-csrf-secret",
-              JWT_SECRET: "e2e-jwt-secret-that-is-long-enough-for-tests",
             },
           },
           {

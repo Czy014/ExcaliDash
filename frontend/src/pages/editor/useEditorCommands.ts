@@ -69,7 +69,6 @@ type UseEditorCommandsParams = {
   setIsRenaming: (isRenaming: boolean) => void;
   setIsSavingOnLeave: (isSaving: boolean) => void;
   setNewName: (name: string) => void;
-  user: unknown;
 };
 
 export const useEditorCommands = ({
@@ -89,7 +88,6 @@ export const useEditorCommands = ({
   setIsRenaming,
   setIsSavingOnLeave,
   setNewName,
-  user,
 }: UseEditorCommandsParams) => {
   const navigate = useNavigate();
 
@@ -200,10 +198,10 @@ export const useEditorCommands = ({
 
   const handleLibraryChange = useCallback(
     (items: readonly any[]) => {
-      if (!canEdit || !user) return;
+      if (!canEdit) return;
       debouncedSaveLibrary([...items]);
     },
-    [canEdit, debouncedSaveLibrary, user],
+    [canEdit, debouncedSaveLibrary],
   );
 
   const handleBackClick = useCallback(async () => {

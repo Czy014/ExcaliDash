@@ -4,13 +4,10 @@ import { useNavigate } from "react-router-dom";
 import * as api from "../api";
 import type { Collection } from "../types";
 import { useTheme } from "../context/ThemeContext";
-import { useAuth } from "../context/AuthContext";
 import { usePreference } from "../context/PreferencesContext";
 import { SettingsMainGrid } from "./settings/SettingsMainGrid";
 import { AdvancedSettings } from "./settings/AdvancedSettings";
 import { SettingsConfirmModals } from "./settings/SettingsConfirmModals";
-import { ApiKeysCard } from "./settings/ApiKeysCard";
-import { AccountSettings } from "./settings/AccountSettings";
 import { Toaster } from "sonner";
 import { displayFontFamily } from "../utils/displayFont";
 import {
@@ -28,7 +25,6 @@ export const Settings: React.FC = () => {
   const [collections, setCollections] = useState<Collection[]>([]);
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
-  const { authEnabled, user, authMode } = useAuth();
   const [editorAutoHide, setEditorAutoHide] = usePreference(
     "editorAutoHide",
     false,
@@ -37,8 +33,6 @@ export const Settings: React.FC = () => {
     "compactSidebar",
     true,
   );
-  const mustResetPassword = Boolean(user?.mustResetPassword);
-  const [settingsSuccess, setSettingsSuccess] = useState("");
   const [legacyDbImportConfirmation, setLegacyDbImportConfirmation] = useState<{
     isOpen: boolean;
     file: File | null;
@@ -58,14 +52,6 @@ export const Settings: React.FC = () => {
     message: React.ReactNode;
   }>({ isOpen: false, message: "" });
   const [legacyDbImportLoading, setLegacyDbImportLoading] = useState(false);
-  const [authToggleLoading, setAuthToggleLoading] = useState(false);
-  const [authToggleError, setAuthToggleError] = useState<string | null>(null);
-  const [authToggleConfirm, setAuthToggleConfirm] = useState<{
-    isOpen: boolean;
-    nextEnabled: boolean | null;
-  }>({ isOpen: false, nextEnabled: null });
-  const [authDisableFinalConfirmOpen, setAuthDisableFinalConfirmOpen] =
-    useState(false);
   const [backupImportConfirmation, setBackupImportConfirmation] = useState<{
     isOpen: boolean;
     file: File | null;
@@ -85,7 +71,6 @@ export const Settings: React.FC = () => {
   }>({ isOpen: false, message: "" });
   const appVersion = import.meta.env.VITE_APP_VERSION || "Unknown version";
   const buildLabel = import.meta.env.VITE_APP_BUILD_LABEL;
-  const isManagedAuthMode = authMode !== "local";
   const UPDATE_CHANNEL_KEY = "excalidash-update-channel";
   const UPDATE_INFO_KEY = "excalidash-update-info";
   const [updateChannel, setUpdateChannel] = useState<api.UpdateChannel>(() => {
@@ -160,37 +145,6 @@ export const Settings: React.FC = () => {
   useEffect(() => {
     void checkForUpdates(updateChannel);
   }, [updateChannel]);
-  const setAuthEnabled = async (enabled: boolean) => {
-    setAuthToggleLoading(true);
-    setAuthToggleError(null);
-    try {
-      const response = await api.api.post<{
-        authEnabled: boolean;
-        bootstrapRequired?: boolean;
-      }>("/auth/auth-enabled", { enabled });
-      if (response.data.authEnabled) {
-        window.location.href = response.data.bootstrapRequired
-          ? "/register"
-          : "/login";
-        return;
-      }
-      window.location.reload();
-    } catch (err: unknown) {
-      let message = "Failed to update authentication setting";
-      if (api.isAxiosError(err)) {
-        message =
-          err.response?.data?.message || err.response?.data?.error || message;
-      }
-      setAuthToggleError(message);
-    } finally {
-      setAuthToggleLoading(false);
-    }
-  };
-  const confirmToggleAuthEnabled = () => {
-    if (authEnabled === null) return;
-    if (authToggleLoading) return;
-    setAuthToggleConfirm({ isOpen: true, nextEnabled: !authEnabled });
-  };
   const exportBackup = async () => {
     try {
       const response = await api.api.get("/export/excalidash", {
@@ -335,28 +289,6 @@ export const Settings: React.FC = () => {
           {" "}
           Settings{" "}
         </h1>{" "}
-        {authToggleError && (
-          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-xl">
-            {" "}
-            <p className="text-red-800 dark:text-red-200 font-medium">
-              {authToggleError}
-            </p>{" "}
-          </div>
-        )}{" "}
-        {settingsSuccess && (
-          <div className="mb-6 rounded-xl border-2 border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950">
-            <p className="font-medium text-green-800 dark:text-green-200">
-              {settingsSuccess}
-            </p>
-          </div>
-        )}{" "}
-        <div className="space-y-10">
-          <AccountSettings />
-          <ApiKeysCard
-            disabled={mustResetPassword}
-            onSuccess={setSettingsSuccess}
-          />
-        </div>
         <div className="mt-10">
           <SettingsMainGrid
             exportBackup={exportBackup}
@@ -387,18 +319,12 @@ export const Settings: React.FC = () => {
           />
         </div>{" "}
         <AdvancedSettings
-          authEnabled={authEnabled}
-          authMode={authMode}
-          authToggleLoading={authToggleLoading}
           backupImportLoading={backupImportLoading}
           legacyDbImportLoading={legacyDbImportLoading}
-          isManagedAuthMode={isManagedAuthMode}
-          user={user}
           appVersion={appVersion}
           buildLabel={buildLabel}
           verifyBackupFile={verifyBackupFile}
           verifyLegacyDbFile={verifyLegacyDbFile}
-          confirmToggleAuthEnabled={confirmToggleAuthEnabled}
           setImportError={setImportError}
           setImportSuccess={setImportSuccess}
         />{" "}
@@ -409,11 +335,6 @@ export const Settings: React.FC = () => {
           setImportError={setImportError}
           importSuccess={importSuccess}
           setImportSuccess={setImportSuccess}
-          authToggleConfirm={authToggleConfirm}
-          setAuthToggleConfirm={setAuthToggleConfirm}
-          authDisableFinalConfirmOpen={authDisableFinalConfirmOpen}
-          setAuthDisableFinalConfirmOpen={setAuthDisableFinalConfirmOpen}
-          setAuthEnabled={setAuthEnabled}
           backupImportConfirmation={backupImportConfirmation}
           setBackupImportConfirmation={setBackupImportConfirmation}
           backupImportSuccess={backupImportSuccess}

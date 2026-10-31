@@ -9,15 +9,14 @@ export const registerDrawingReadRoutes = (
 ) => {
   const {
     prisma,
-    optionalAuth,
+    workspace,
     asyncHandler,
     parseJsonField,
     getRequestPrincipal,
-    respondWithAuthErrorIfPresent,
   } = context;
   app.get(
     "/drawings/:id",
-    optionalAuth,
+    workspace,
     asyncHandler(async (req, res) => {
       const principal = await getRequestPrincipal(req);
 
@@ -28,7 +27,6 @@ export const registerDrawingReadRoutes = (
         drawingId: id,
       });
       if (!canViewDrawing(access)) {
-        if (respondWithAuthErrorIfPresent(req, res)) return;
         return res.status(404).json({
           error: "Drawing not found",
           message: "Drawing does not exist",

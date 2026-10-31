@@ -1,6 +1,6 @@
 ---
 title: "Self-host Excalidraw: Quick Start"
-description: Install ExcaliDash with Docker Compose, create your administrator account, and start a self-hosted Excalidraw workspace.
+description: Install ExcaliDash with Docker Compose, and open a single-user Excalidraw workspace.
 ---
 
 <script setup>
@@ -22,36 +22,36 @@ Run ExcaliDash with Docker Compose.
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/ZimengXiong/ExcaliDash.git
+   git clone https://github.com/Czy014/ExcaliDash.git
    cd ExcaliDash
    ```
 
 2. Start the services:
 
    ```bash
-   docker compose -f docker-compose.prod.yml up -d
+   docker compose up -d --build
    ```
 
 3. Open `http://localhost:6767`.
-4. [Create the administrator account](/guide/first-run#create-the-administrator).
+4. Open the library directly and select **New Drawing**. All visitors share this workspace; see [single-user access](/guide/authentication).
 
-## Set up your administrator account
+## Open your workspace
 
-Use the arrows to follow the complete first-run flow, from choosing authentication to opening your first drawing. Each screenshot follows this page's light or dark theme.
+A new workspace starts empty. Select New Drawing to open the editor.
 
-<ScreenshotCarousel label="First-run setup from authentication to your first drawing" :slides="setupSlides" />
+<ScreenshotCarousel label="Open the workspace and create a drawing" :slides="setupSlides" />
 
 ## Check the services
 
 ```bash
-docker compose -f docker-compose.prod.yml ps
-docker compose -f docker-compose.prod.yml logs -f
+docker compose ps
+docker compose logs -f
 ```
 
 ## Stop the stack
 
 ```bash
-docker compose -f docker-compose.prod.yml down
+docker compose down
 ```
 
 For a server deployment, see [Deploy with Docker Compose](/deploy/docker).

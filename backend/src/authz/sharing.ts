@@ -1,6 +1,5 @@
 import type { PrismaClient } from "../generated/client";
 import crypto from "crypto";
-import { hashTokenForStorage } from "../auth/tokenSecurity";
 
 export type DrawingPermission = "view" | "edit";
 export type DrawingAccess = "none" | DrawingPermission | "owner";
@@ -18,7 +17,7 @@ export const buildShareLinkToken = (): string =>
   crypto.randomBytes(24).toString("base64url");
 
 export const hashShareLinkToken = (token: string): string =>
-  hashTokenForStorage(token);
+  crypto.createHash("sha256").update(token).digest("hex");
 
 export const getDrawingAccess = async (params: {
   prisma: PrismaClient;
@@ -28,65 +27,20 @@ export const getDrawingAccess = async (params: {
 }): Promise<DrawingAccess> => {
   const nowMs = (params.now ?? new Date()).getTime();
 
-  let baseAccess: DrawingAccess = "none";
+  const drawing = await params.prisma.drawing.findUnique({
+    where: { id: params.drawingId },
+    select: { userId: true },
+  });
+  if (!drawing) return "none";
+  if (params.principal?.userId === drawing.userId) return "owner";
 
-  // User-based access (owner or explicit ACL).
-  if (params.principal?.kind === "user") {
-    const drawing = await params.prisma.drawing.findUnique({
-      where: { id: params.drawingId },
-      select: { userId: true, collectionId: true },
-    });
-    if (!drawing) return "none";
-    if (drawing.userId === params.principal.userId) return "owner";
-
-    const perm = await params.prisma.drawingPermission.findUnique({
-      where: {
-        drawingId_granteeUserId: {
-          drawingId: params.drawingId,
-          granteeUserId: params.principal.userId,
-        },
-      },
-      select: { permission: true },
-    });
-    baseAccess = normalizeDrawingPermission(perm?.permission) ?? baseAccess;
-
-    // A drawing inherits the strongest access available from its collection.
-    // This matters when a direct drawing grant is weaker than the collection grant.
-    if (drawing.collectionId) {
-      const ownedCollection = await params.prisma.collection.findFirst({
-        where: {
-          id: drawing.collectionId,
-          userId: params.principal.userId,
-        },
-        select: { id: true },
-      });
-      if (ownedCollection) {
-        baseAccess = "owner";
-      } else {
-        const collectionShare = await params.prisma.collectionShare.findFirst({
-          where: {
-            collectionId: drawing.collectionId,
-            granteeUserId: params.principal.userId,
-          },
-          select: { role: true },
-        });
-        const collectionAccess =
-          normalizeDrawingPermission(collectionShare?.role) ?? "none";
-        baseAccess = maxAccess(baseAccess, collectionAccess);
-      }
-    }
-  }
-
-  // Google Docs-style link policy: applies regardless of whether the visitor is signed in.
-  // If a drawing has an active link-share policy, possession of the drawing id URL grants the policy access.
+  // Active links grant access to historical drawings outside this workspace.
   const linkPolicy = await getActiveLinkShareAccess({
     prisma: params.prisma,
     drawingId: params.drawingId,
     nowMs,
   });
-  const linkAccess: DrawingAccess = linkPolicy ?? "none";
-
-  return maxAccess(baseAccess, linkAccess);
+  return linkPolicy ?? "none";
 };
 
 export const canViewDrawing = (
@@ -117,19 +71,3 @@ const getActiveLinkShareAccess = async (params: {
   });
   return normalizeDrawingPermission(linkShare?.permission);
 };
-
-const accessRank = (access: DrawingAccess): number => {
-  switch (access) {
-    case "owner":
-      return 3;
-    case "edit":
-      return 2;
-    case "view":
-      return 1;
-    default:
-      return 0;
-  }
-};
-
-const maxAccess = (a: DrawingAccess, b: DrawingAccess): DrawingAccess =>
-  accessRank(a) >= accessRank(b) ? a : b;

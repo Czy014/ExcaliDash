@@ -23,7 +23,7 @@ export const registerLegacySqliteImportRoutes = (
   const {
     app,
     prisma,
-    requireAuth,
+    workspace,
     asyncHandler,
     upload,
     uploadDir,
@@ -39,7 +39,7 @@ export const registerLegacySqliteImportRoutes = (
   } = deps;
   app.post(
     "/import/sqlite/legacy/verify",
-    requireAuth,
+    workspace,
     upload.single("db"),
     asyncHandler(async (req, res) => {
       if (!req.user) return res.status(401).json({ error: "Unauthorized" });
@@ -169,7 +169,7 @@ export const registerLegacySqliteImportRoutes = (
   );
   app.post(
     "/import/sqlite/legacy",
-    requireAuth,
+    workspace,
     upload.single("db"),
     asyncHandler(async (req, res) => {
       if (!req.user) return res.status(401).json({ error: "Unauthorized" });

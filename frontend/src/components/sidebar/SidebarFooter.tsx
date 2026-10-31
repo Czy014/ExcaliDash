@@ -1,10 +1,8 @@
 import React, { useEffect, useId, useRef, useState } from "react";
 import {
-  Shield,
   Settings as SettingsIcon,
   Trash2,
   SlidersHorizontal,
-  LogOut,
   ChevronUp,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -12,19 +10,9 @@ import clsx from "clsx";
 import { useLocale } from "../../context/useLocale";
 import { usePreference } from "../../context/PreferencesContext";
 
-type UserLike =
-  | {
-      role?: string;
-    }
-  | null
-  | undefined;
-
 interface SidebarFooterProps {
   selectedCollectionId: string | null | undefined;
-  authEnabled: boolean | null;
-  user: UserLike;
   onDrop?: (e: React.DragEvent, collectionId: string | null) => void;
-  onLogout: () => void;
 }
 
 const footerButtonClass = (isActive: boolean, compact: boolean) =>
@@ -37,10 +25,7 @@ const footerButtonClass = (isActive: boolean, compact: boolean) =>
 
 export const SidebarFooter: React.FC<SidebarFooterProps> = ({
   selectedCollectionId,
-  authEnabled,
-  user,
   onDrop,
-  onLogout,
 }) => {
   const navigate = useNavigate();
   const { t } = useLocale();
@@ -49,7 +34,6 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const footerRef = useRef<HTMLDivElement>(null);
   const actionsId = useId();
-  const isAdmin = user?.role === "ADMIN";
   const selectPage = (path: string) => {
     setIsOpen(false);
     navigate(path);
@@ -133,21 +117,6 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = ({
           <span className="min-w-0 flex-1 text-left">{t("sidebar.trash")}</span>
         </button>
 
-        {authEnabled !== null && (isAdmin || authEnabled === false) && (
-          <button
-            onClick={() => selectPage("/admin")}
-            className={footerButtonClass(
-              selectedCollectionId === "ADMIN",
-              compact,
-            )}
-          >
-            <Shield size={18} />
-            <span className="min-w-0 flex-1 text-left">
-              {t("sidebar.admin")}
-            </span>
-          </button>
-        )}
-
         <button
           onClick={() => selectPage("/settings")}
           className={footerButtonClass(
@@ -160,28 +129,6 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = ({
             {t("sidebar.settings")}
           </span>
         </button>
-
-        {authEnabled && (
-          <div className="mt-2 pt-2 border-t border-slate-200 dark:border-neutral-700">
-            <button
-              onClick={() => {
-                setIsOpen(false);
-                onLogout();
-              }}
-              className={clsx(
-                compact
-                  ? "ui-menu-item"
-                  : "ui-button-secondary w-full justify-start",
-                "text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30",
-              )}
-            >
-              <LogOut size={18} />
-              <span className="min-w-0 flex-1 text-left">
-                {t("sidebar.logout")}
-              </span>
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

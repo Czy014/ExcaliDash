@@ -14,12 +14,11 @@ export const registerDrawingHistoryRoutes = (
 ) => {
   const {
     prisma,
-    optionalAuth,
+    workspace,
     asyncHandler,
     parseJsonField,
     invalidateDrawingsCache,
     getRequestPrincipal,
-    respondWithAuthErrorIfPresent,
   } = context;
   // ============================================================
   // Drawing Version History
@@ -28,7 +27,7 @@ export const registerDrawingHistoryRoutes = (
   // List snapshots (metadata only)
   app.get(
     "/drawings/:id/history",
-    optionalAuth,
+    workspace,
     asyncHandler(async (req, res) => {
       const principal = await getRequestPrincipal(req);
       const { id } = req.params;
@@ -38,7 +37,6 @@ export const registerDrawingHistoryRoutes = (
         drawingId: id,
       });
       if (!canViewDrawing(access)) {
-        if (respondWithAuthErrorIfPresent(req, res)) return;
         return res.status(404).json({ error: "Drawing not found" });
       }
 
@@ -75,7 +73,7 @@ export const registerDrawingHistoryRoutes = (
   // Get full snapshot for preview
   app.get(
     "/drawings/:id/history/:snapshotId",
-    optionalAuth,
+    workspace,
     asyncHandler(async (req, res) => {
       const principal = await getRequestPrincipal(req);
       const { id, snapshotId } = req.params;
@@ -85,7 +83,6 @@ export const registerDrawingHistoryRoutes = (
         drawingId: id,
       });
       if (!canViewDrawing(access)) {
-        if (respondWithAuthErrorIfPresent(req, res)) return;
         return res.status(404).json({ error: "Drawing not found" });
       }
 
@@ -107,7 +104,7 @@ export const registerDrawingHistoryRoutes = (
   // Restore a snapshot (snapshots current state first, then applies old state)
   app.post(
     "/drawings/:id/history/:snapshotId/restore",
-    optionalAuth,
+    workspace,
     asyncHandler(async (req, res) => {
       const principal = await getRequestPrincipal(req);
       const { id, snapshotId } = req.params;
@@ -117,7 +114,6 @@ export const registerDrawingHistoryRoutes = (
         drawingId: id,
       });
       if (!canEditDrawing(access)) {
-        if (respondWithAuthErrorIfPresent(req, res)) return;
         return res.status(404).json({ error: "Drawing not found" });
       }
 

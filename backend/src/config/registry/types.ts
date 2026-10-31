@@ -5,8 +5,6 @@ export interface EnvVarSpec {
   group:
     | "Server"
     | "Database"
-    | "Authentication"
-    | "OIDC"
     | "Security"
     | "S3 storage"
     | "Backups"
@@ -21,7 +19,6 @@ export interface EnvVarSpec {
   values?: readonly string[];
   secret?: boolean;
   requiredInProduction?: boolean;
-  requiredWhenOidcEnabled?: boolean;
   /** Legacy fallback names; reading via alias logs a console.warn once. */
   aliases?: readonly string[];
   /** One sentence, used in generated .env.example comment and docs table. */

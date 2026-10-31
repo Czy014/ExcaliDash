@@ -6,13 +6,11 @@ import * as api from "../../api";
 type UseLibraryImportFromUrlParams = {
   excalidrawAPIRef: RefObject<any>;
   isReady: boolean;
-  user: unknown;
 };
 
 export const useLibraryImportFromUrl = ({
   excalidrawAPIRef,
   isReady,
-  user,
 }: UseLibraryImportFromUrlParams) => {
   useEffect(() => {
     if (!isReady || !excalidrawAPIRef.current) return;
@@ -77,9 +75,7 @@ export const useLibraryImportFromUrl = ({
         });
         const updatedItems =
           excalidrawAPIRef.current.getAppState().libraryItems || [];
-        if (user) {
-          await api.updateLibrary([...updatedItems]);
-        }
+        await api.updateLibrary([...updatedItems]);
         toast.success("Library imported successfully", {
           id: "library-import",
         });
@@ -94,5 +90,5 @@ export const useLibraryImportFromUrl = ({
       }
     };
     importLibraryFromUrl();
-  }, [excalidrawAPIRef, isReady, user]);
+  }, [excalidrawAPIRef, isReady]);
 };

@@ -45,13 +45,6 @@ export const securityEnv: readonly EnvVarSpec[] = [
     doc: "Redirect HTTP requests to HTTPS when a secure origin is detected.",
   },
   {
-    name: "API_KEY_HASH_PEPPER",
-    group: "Security",
-    kind: "string",
-    secret: true,
-    doc: "Pepper mixed into API-key hashes; set before creating keys (see docs).",
-  },
-  {
     name: "DEBUG_CSRF",
     group: "Security",
     kind: "boolean",

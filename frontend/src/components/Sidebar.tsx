@@ -3,9 +3,7 @@ import { LayoutGrid, Folder, Plus, Archive, FolderOpen } from "lucide-react";
 import type { Collection } from "../types";
 import clsx from "clsx";
 import { ConfirmModal } from "./ConfirmModal";
-import { ShareCollectionModal } from "./ShareCollectionModal";
 import { Logo } from "./Logo";
-import { useAuth } from "../context/AuthContext";
 import { displayFontFamily } from "../utils/displayFont";
 import { SidebarItem } from "./sidebar/SidebarItem";
 import { SidebarFooter } from "./sidebar/SidebarFooter";
@@ -34,7 +32,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onDeleteCollection,
   onDrop,
 }) => {
-  const { logout, user, authEnabled } = useAuth();
   const { t } = useLocale();
   const [isCreating, setIsCreating] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState("");
@@ -43,9 +40,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [contextMenu, setContextMenu] =
     useState<SidebarContextMenuState | null>(null);
   const [collectionToDelete, setCollectionToDelete] = useState<string | null>(
-    null,
-  );
-  const [collectionToShare, setCollectionToShare] = useState<string | null>(
     null,
   );
   useEffect(() => {
@@ -71,8 +65,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const handleItemContextMenu = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     e.stopPropagation();
-    const collection = collections.find((c) => c.id === id);
-    if (!collection?.isOwner && collection?.isOwner !== undefined) return;
     setContextMenu({ x: e.clientX, y: e.clientY, type: "item", id });
   };
   const handleBackgroundContextMenu = (e: React.MouseEvent) => {
@@ -204,41 +196,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onEditSubmit={handleEditSubmit}
                   onEditBlur={() => setEditingId(null)}
                   onDrop={onDrop}
-                  extraAction={
-                    <div className="flex items-center gap-1">
-                      {/* Shared indicator — only for owned collections that have been shared */}
-                      {collection.isOwner !== false && collection.isShared && (
-                        <span className="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400">
-                          {t("sidebar.shared")}
-                        </span>
-                      )}
-                      {/* Only show roles for collections shared with this user. */}
-                      {collection.isOwner === false && (
-                        <span
-                          className={clsx(
-                            "shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-semibold",
-                            collection.sharedRole === "edit"
-                              ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
-                              : "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800",
-                          )}
-                        >
-                          {collection.sharedRole === "edit"
-                            ? t("sidebar.editor")
-                            : t("sidebar.viewer")}
-                        </span>
-                      )}
-                    </div>
-                  }
                 />
               ))}
           </div>
         </nav>
         <SidebarFooter
           selectedCollectionId={selectedCollectionId}
-          authEnabled={authEnabled}
-          user={user}
           onDrop={onDrop}
-          onLogout={logout}
         />
       </div>
       {contextMenu && (
@@ -251,7 +215,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             setEditingId(collection.id);
             setEditName(collection.name);
           }}
-          onShareCollection={setCollectionToShare}
           onDeleteCollection={setCollectionToDelete}
         />
       )}
@@ -267,14 +230,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           }
         }}
         onCancel={() => setCollectionToDelete(null)}
-      />
-      <ShareCollectionModal
-        isOpen={!!collectionToShare}
-        collectionId={collectionToShare ?? ""}
-        collectionName={
-          collections.find((c) => c.id === collectionToShare)?.name ?? ""
-        }
-        onClose={() => setCollectionToShare(null)}
       />
     </>
   );

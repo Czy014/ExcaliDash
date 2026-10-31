@@ -104,7 +104,7 @@ export const rehydrateFilesFromUrls = async (
 
 /**
  * Strict rehydration for portable .excalidraw downloads. Route managed files
- * through the authenticated same-origin endpoint (also avoiding public-S3
+ * through the access-checked same-origin endpoint (also avoiding public-S3
  * CORS requirements). HTTP(S) references may instead be unmanaged imported
  * images: when the endpoint returns 404, try their original URL. Reject the
  * export if any reference remains.
@@ -127,8 +127,8 @@ export const rehydrateFilesForExport = async (
           const originalUrl = file.dataURL as string;
           // No file-store metadata reaches the client for public S3 URLs.
           // Probe the managed endpoint first; only a missing file permits
-          // fallback, never an auth/server/network failure. Explicit managed
-          // /api/files references must stay on the authenticated endpoint.
+          // fallback, never an access/server/network failure. Explicit managed
+          // /api/files references must stay on the access-checked endpoint.
           const fallbackUrl = /^https?:\/\//i.test(originalUrl)
             ? originalUrl
             : undefined;

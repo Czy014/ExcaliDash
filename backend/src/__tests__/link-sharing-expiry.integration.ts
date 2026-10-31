@@ -1,10 +1,7 @@
+import { WORKSPACE_USER_ID } from "../middleware/workspace";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import request from "supertest";
-import bcrypt from "bcrypt";
-import jwt, { SignOptions } from "jsonwebtoken";
-import { StringValue } from "ms";
 import { PrismaClient } from "../generated/client";
-import { config } from "../config";
 import { getTestPrisma, setupTestDb } from "./testUtils";
 
 describe("Link Sharing - Expiry Resolution", () => {
@@ -15,7 +12,6 @@ describe("Link Sharing - Expiry Resolution", () => {
   let prisma: PrismaClient;
   let app: any;
   let ownerUser: { id: string; email: string };
-  let ownerToken: string;
   let ownerAgent: any;
   let ownerCsrfHeaderName: string;
   let ownerCsrfToken: string;
@@ -47,7 +43,6 @@ describe("Link Sharing - Expiry Resolution", () => {
     return ownerAgent
       .post(`/drawings/${drawingId}/link-shares`)
       .set("User-Agent", userAgent)
-      .set("Authorization", `Bearer ${ownerToken}`)
       .set(ownerCsrfHeaderName, ownerCsrfToken)
       .send(payload);
   };
@@ -68,22 +63,10 @@ describe("Link Sharing - Expiry Resolution", () => {
 
     ({ app } = await import("../index"));
 
-    await prisma.systemConfig.upsert({
-      where: { id: "default" },
-      update: {
-        authEnabled: true,
-        registrationEnabled: false,
-      },
-      create: {
-        id: "default",
-        authEnabled: true,
-        registrationEnabled: false,
-      },
-    });
-
-    const passwordHash = await bcrypt.hash("password123", 10);
+    const passwordHash = "unused";
     ownerUser = await prisma.user.create({
       data: {
+        id: WORKSPACE_USER_ID,
         email: "owner-expiry-user@test.local",
         passwordHash,
         name: "Owner User",
@@ -92,15 +75,6 @@ describe("Link Sharing - Expiry Resolution", () => {
       },
       select: { id: true, email: true },
     });
-
-    const signOptions: SignOptions = {
-      expiresIn: config.jwtAccessExpiresIn as StringValue,
-    };
-    ownerToken = jwt.sign(
-      { userId: ownerUser.id, email: ownerUser.email, type: "access" },
-      config.jwtSecret,
-      signOptions,
-    );
 
     ownerAgent = request.agent(app);
     const csrfRes = await ownerAgent

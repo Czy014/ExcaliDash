@@ -15,8 +15,6 @@ interface DrawingCardProps {
   collections: Collection[];
   isSelected: boolean;
   isTrash?: boolean;
-  isShared?: boolean;
-  isSharedCollection?: boolean;
   onToggleSelection: (e: React.MouseEvent) => void;
   onRename: (id: string, name: string) => void;
   onDelete: (id: string) => void;
@@ -33,8 +31,6 @@ export const DrawingCard: React.FC<DrawingCardProps> = ({
   collections,
   isSelected,
   isTrash = false,
-  isShared = false,
-  isSharedCollection = false,
   onToggleSelection,
   onRename,
   onDelete,
@@ -94,7 +90,7 @@ export const DrawingCard: React.FC<DrawingCardProps> = ({
 
   useEffect(() => {
     let cancelled = false;
-    if (isShared || isTrash) {
+    if (isTrash) {
       setStorageAvailable(false);
       return;
     }
@@ -104,7 +100,7 @@ export const DrawingCard: React.FC<DrawingCardProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [drawing.id, isShared, isTrash]);
+  }, [drawing.id, isTrash]);
 
   const handleExport = useCallback(async () => {
     try {
@@ -146,13 +142,9 @@ export const DrawingCard: React.FC<DrawingCardProps> = ({
       <div
         id={`drawing-card-${drawing.id}`}
         onContextMenu={handleContextMenu}
-        draggable={!isRenaming && !isShared}
+        draggable={!isRenaming}
         onDragStart={(e) => {
           if (isRenaming) {
-            e.preventDefault();
-            return;
-          }
-          if (isShared) {
             e.preventDefault();
             return;
           }
@@ -251,12 +243,7 @@ export const DrawingCard: React.FC<DrawingCardProps> = ({
                 title={drawing.name}
                 onDoubleClick={(e) => {
                   e.stopPropagation();
-                  const canRename =
-                    !isTrash &&
-                    (!isShared ||
-                      drawing.accessLevel === "edit" ||
-                      drawing.accessLevel === "owner");
-                  if (canRename) setIsRenaming(true);
+                  if (!isTrash) setIsRenaming(true);
                 }}
               >
                 {drawing.name}
@@ -274,8 +261,6 @@ export const DrawingCard: React.FC<DrawingCardProps> = ({
               <CollectionPicker
                 drawing={drawing}
                 collections={collections}
-                isShared={isShared}
-                isSharedCollection={isSharedCollection}
                 isOpen={showCollectionDropdown}
                 onToggle={() =>
                   setShowCollectionDropdown(!showCollectionDropdown)
@@ -294,7 +279,6 @@ export const DrawingCard: React.FC<DrawingCardProps> = ({
           collections={collections}
           position={contextMenu}
           isTrash={isTrash}
-          isShared={isShared}
           storageAvailable={storageAvailable}
           isExporting={isExporting}
           exportError={exportError}

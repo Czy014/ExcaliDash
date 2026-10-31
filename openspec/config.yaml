@@ -7,12 +7,12 @@ context: |
   本仓库为独立 fork Czy014/ExcaliDash，上游为 ZimengXiong/ExcaliDash。
   本地 OpenSpec 根目录为本仓库；不使用父目录或 Homebase 的 openspec/。
   初始化基线是上游提交 0f9be2d8649be7650e6bee2844739c584fa76c35，VERSION 为 0.6.7。
-  基线仍有实时协作；个人绘图库方向的行为变更须通过 change 实施，不能写成已实现。
+  当前实现为无实时协作的单用户绘图库；后续行为变更须通过 change 实施，验证后再同步主规格。
   frontend/ 使用 React 18、TypeScript、Vite、React Router 和官方 @excalidraw/excalidraw。
   backend/ 使用 TypeScript、Express 5、Prisma；生产 keeper 当前使用 SQLite，上游也支持 PostgreSQL。
   单元和集成测试使用 Vitest，浏览器测试使用 e2e/ 下的 Playwright。
   Node.js 要求 >=24.22.1，项目声明 npm 10.9.2，依赖使用现有 package-lock.json。
-  已有能力包括绘图和分类管理、图片、素材库、导入导出、历史记录及认证和分享。
+  已有能力包括绘图和分类管理、图片、素材库、导入导出、历史记录及公开链接；无前后端认证，仅支持 AUTH_MODE=disabled。
   Homebase 是独立部署管理项目，本仓库不依赖 Homebase 核心；生产集成在 Homebase 的 Draw 插件中。
   用户已确定：移除实时协作；同图允许多页面打开，用版本号防止覆盖；冲突后暂停自动保存，保留本地草稿，提供加载最新或另存副本。
   所有工作使用独立分支，main 只用于集成已验收修改。保留上游版权和 LGPLv3 许可证。

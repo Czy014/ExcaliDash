@@ -26,8 +26,6 @@ const sortOptions: {
 ];
 
 export const useDashboardSort = () => {
-  // Server-backed via the shared preferences context, which owns the
-  // no-clobber-on-first-mount gate and refetch-on-user-change behavior.
   const { updatePreferences } = usePreferences();
   const [field] = usePreference("dashboardSortField", DEFAULT_SORT_FIELD);
   const [direction] = usePreference(
@@ -56,9 +54,6 @@ export const useDashboardSort = () => {
   return {
     sortConfig,
     sortOptions,
-    currentSortOption:
-      sortOptions.find((option) => option.field === sortConfig.field) ??
-      sortOptions[0],
     handleSortFieldChange,
     handleSortDirectionToggle,
   };

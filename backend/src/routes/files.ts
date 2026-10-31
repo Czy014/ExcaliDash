@@ -35,8 +35,7 @@ const isValidIdSegment = (value: unknown): value is string =>
 
 export type FileRouteDeps = {
   prisma: PrismaClient;
-  requireAuth: express.RequestHandler;
-  optionalAuth: express.RequestHandler;
+  workspace: express.RequestHandler;
   asyncHandler: <T = void>(
     fn: (
       req: express.Request,
@@ -50,7 +49,7 @@ export const registerFileRoutes = (
   app: express.Express,
   deps: FileRouteDeps,
 ): void => {
-  const { prisma, requireAuth, optionalAuth, asyncHandler } = deps;
+  const { prisma, workspace, asyncHandler } = deps;
 
   // Raw body parser mounted ONLY on the upload route. The global
   // express.json parser ignores non-JSON content types, so the raw image
@@ -92,7 +91,7 @@ export const registerFileRoutes = (
   // ------------------------------------------------------------------
   app.get(
     "/files/config",
-    requireAuth,
+    workspace,
     asyncHandler(async (_req, res) => {
       return res.json({ s3Enabled: isS3Enabled() });
     }),
@@ -105,9 +104,7 @@ export const registerFileRoutes = (
   // ------------------------------------------------------------------
   app.put(
     "/drawings/:drawingId/files/:fileId",
-    // requireAuth runs BEFORE the raw-body parser so unauthenticated clients
-    // can't impose the buffer cost of up to FILE_UPLOAD_MAX_MB per request.
-    requireAuth,
+    workspace,
     rawUpload,
     handleUploadPayloadError,
     asyncHandler(async (req, res) => {
@@ -217,7 +214,7 @@ export const registerFileRoutes = (
   // ------------------------------------------------------------------
   app.get(
     "/files/:drawingId/:fileId",
-    optionalAuth,
+    workspace,
     asyncHandler(async (req, res) => {
       const { drawingId, fileId } = req.params;
       if (!isValidIdSegment(drawingId) || !isValidIdSegment(fileId)) {

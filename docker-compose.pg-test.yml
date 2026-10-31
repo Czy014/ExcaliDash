@@ -26,9 +26,8 @@ services:
       - DATABASE_PROVIDER=postgresql
       - DATABASE_URL=postgresql://excalidash:test123@postgres:5432/excalidash
       - FRONTEND_URL=http://localhost:6767
-      - JWT_SECRET=test-secret-pg-min-32-chars-long
       - CSRF_SECRET=test-secret-pg
-      - AUTH_MODE=local
+      - AUTH_MODE=disabled
     ports:
       - "8000:8000"
     depends_on:

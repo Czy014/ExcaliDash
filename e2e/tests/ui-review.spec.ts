@@ -1,10 +1,8 @@
 import { expect, test } from "@playwright/test";
 import path from "node:path";
 import {
-  API_URL,
   createDrawing,
   deleteDrawing,
-  getCsrfHeaders,
   listDrawings,
   updateDrawing,
 } from "./helpers/api";
@@ -14,20 +12,6 @@ const outputDir = process.env.UI_REVIEW_OUTPUT
   ? path.resolve(process.env.UI_REVIEW_OUTPUT)
   : path.resolve("test-results/ui-review");
 
-const login = async (request: import("@playwright/test").APIRequestContext) => {
-  const response = await request.post(`${API_URL}/auth/login`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(await getCsrfHeaders(request)),
-    },
-    data: {
-      email: "auth-e2e@example.test",
-      password: "Auth-E2E-Password-123!",
-    },
-  });
-  expect(response.ok()).toBe(true);
-};
-
 test.describe("UI review screenshots", () => {
   test.skip(
     !enabled,
@@ -36,7 +20,6 @@ test.describe("UI review screenshots", () => {
 
   test("captures the polished application interface", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
-    await login(page.request);
 
     const staleReviewDrawings = (await listDrawings(page.request)).filter(
       (item) =>
@@ -132,17 +115,6 @@ test.describe("UI review screenshots", () => {
         .locator("xpath=../..")
         .screenshot({ path: path.join(outputDir, "05-ai-settings-card.png") });
 
-      await page.getByRole("region", { name: "Account security" }).screenshot({
-        path: path.join(outputDir, "06-account-security.png"),
-      });
-
-      await page.goto("/admin");
-      await expect(page.getByRole("heading", { name: "Admin" })).toBeVisible();
-      await page.screenshot({
-        path: path.join(outputDir, "07-admin.png"),
-        fullPage: true,
-      });
-
       await page.goto(`/editor/${drawing.id}`);
       await page.waitForSelector("canvas.excalidraw__canvas.interactive", {
         timeout: 15_000,
@@ -173,35 +145,6 @@ test.describe("UI review screenshots", () => {
         path: path.join(outputDir, "10-history-preview.png"),
       });
       await page.getByLabel("Close version history").click();
-
-      await deleteDrawing(page.request, drawing.id);
-      await page.request.post(`${API_URL}/auth/logout`, {
-        headers: await getCsrfHeaders(page.request),
-      });
-      await page.goto("/login");
-      await expect(
-        page.getByRole("heading", { name: "Sign in to your account" }),
-      ).toBeVisible();
-      await page.screenshot({
-        path: path.join(outputDir, "14-login.png"),
-        fullPage: true,
-      });
-      await page.goto("/reset-password");
-      await expect(
-        page.getByRole("heading", { name: "Reset your password" }),
-      ).toBeVisible();
-      await page.screenshot({
-        path: path.join(outputDir, "15-password-reset-request.png"),
-        fullPage: true,
-      });
-      await page.goto("/reset-password-confirm#token=review-placeholder");
-      await expect(
-        page.getByRole("heading", { name: "Set new password" }),
-      ).toBeVisible();
-      await page.screenshot({
-        path: path.join(outputDir, "16-password-reset-confirm.png"),
-        fullPage: true,
-      });
     } finally {
       await deleteDrawing(page.request, drawing.id).catch(() => undefined);
     }

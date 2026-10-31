@@ -1,61 +1,34 @@
 ---
 title: Set Up Your ExcaliDash Workspace
-description: Create your ExcaliDash administrator account, invite users, and organize your first Excalidraw drawings into collections.
+description: Open the single-user library and organize your first Excalidraw drawings.
 ---
 
 <script setup>
-import { setupSlides, userManagementSlides, workspaceSlides } from "../.vitepress/theme/screenshot-flows";
+import { setupSlides, workspaceSlides } from "../.vitepress/theme/screenshot-flows";
 </script>
 
 # First run
 
-Create the administrator account before inviting other users. The default authentication mode is `local`.
+Open ExcaliDash to enter the library directly. There is no account setup or sign-in. The only supported mode is `AUTH_MODE=disabled`.
 
-## Choose an authentication mode
+All visitors use the same workspace identity and can change its drawings. Limit network access to the people who may manage the whole library; public links do not isolate visitors from that identity.
 
-| Mode            | Best for                                   |
-| --------------- | ------------------------------------------ |
-| `local`         | ExcaliDash accounts                        |
-| `hybrid`        | Local accounts and OpenID Connect          |
-| `oidc_enforced` | OpenID Connect only                        |
-| `disabled`      | Personal use in isolated environments only |
+## Your first drawing
 
-::: danger Do not expose disabled authentication publicly
-`AUTH_MODE=disabled` gives every visitor the same identity and access.
-:::
+Select **New Drawing**, edit the canvas, and return to the library. Reopen the drawing to check that it was saved.
 
-## Create the administrator
+<ScreenshotCarousel label="Open the workspace and create your first drawing" :slides="setupSlides" />
 
-Use the arrows to follow each screen of the default local-account setup. If authentication is already enabled, start at the administrator form.
+## Organize your workspace
 
-<ScreenshotCarousel label="Create the first administrator and open your first drawing" :slides="setupSlides" />
+Create collections in the sidebar and move drawings into them. Use **Trash** to review deleted drawings before permanently deleting them.
 
-Setup codes expire after 15 minutes by default.
-
-## Invite users
-
-Open **Admin** to create another local account or enable self-registration.
-
-<ScreenshotCarousel label="Manage registration and create a local user" :slides="userManagementSlides" />
-
-For OpenID Connect (OIDC), [configure the provider](/guide/authentication#configure-openid-connect) before signing in. `OIDC_FIRST_USER_ADMIN=true` makes the first provisioned OIDC user an administrator.
-
-## Your workspace
-
-Use the arrows to explore an established example workspace, drawing sharing, and version history.
-
-<ScreenshotCarousel label="Workspace organization and sharing" :slides="workspaceSlides" />
+<ScreenshotCarousel label="Workspace organization" :slides="workspaceSlides" />
 
 [Sample drawing credits](/images/CREDITS.txt).
 
-## Securing your instance
+## Existing installations
 
-Before exposing ExcaliDash beyond a local machine:
+The workspace keeps the existing disabled-mode owner (`bootstrap-admin`). Its drawings, images and history remain available. Historical users and authentication fields remain in the database, but accounts cannot sign in and their private libraries are not automatically merged.
 
-- Terminate TLS at a trusted reverse proxy.
-- Set stable `JWT_SECRET` and `CSRF_SECRET` values.
-- Keep `TRUST_PROXY=false` unless requests always pass through a trusted proxy.
-- Persist the database and test a restore procedure.
-- Keep frontend and backend image tags aligned.
-
-Next: [Configure authentication](/guide/authentication).
+See [single-user access](/guide/authentication) and [configuration](/guide/configuration).

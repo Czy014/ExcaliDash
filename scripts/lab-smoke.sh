@@ -33,16 +33,12 @@ echo
 echo "Checking app frontends..."
 check_url "basic" "http://localhost:1101/"
 check_url "basic + SeaweedFS" "http://localhost:1102/"
-check_url "OIDC enforced" "http://localhost:1103/"
-check_url "hybrid" "http://localhost:1104/"
 check_url "trusted proxy" "http://localhost:1105/"
 
 echo
 echo "Checking backend health through each frontend proxy..."
 check_url "basic health" "http://localhost:1101/api/health"
 check_url "basic + SeaweedFS health" "http://localhost:1102/api/health"
-check_url "OIDC health" "http://localhost:1103/api/health"
-check_url "hybrid health" "http://localhost:1104/api/health"
 check_url "trusted proxy health" "http://localhost:1105/api/health"
 
 echo

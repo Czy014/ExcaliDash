@@ -90,42 +90,6 @@ const backupDbIfPresent = () => {
 
 const isNonProd = nodeEnv !== "production";
 const isFileDb = databaseUrl.startsWith("file:");
-const shouldForceSingleUserDev =
-  isNonProd &&
-  process.env.AUTH_MODE !== "hybrid" &&
-  process.env.AUTH_MODE !== "oidc_enforced" &&
-  /^(1|true|yes)$/i.test(process.env.EXCALIDASH_DEV_SINGLE_USER || "");
-
-const forceSingleUserDevMode = async () => {
-  const { PrismaClient } = require("../src/generated/client");
-  const prisma = new PrismaClient();
-
-  try {
-    await prisma.systemConfig.upsert({
-      where: { id: "default" },
-      update: {
-        authEnabled: false,
-        authOnboardingCompleted: true,
-      },
-      create: {
-        id: "default",
-        authEnabled: false,
-        authOnboardingCompleted: true,
-        registrationEnabled: false,
-        authLoginRateLimitEnabled: true,
-        authLoginRateLimitWindowMs: 15 * 60 * 1000,
-        authLoginRateLimitMax: 20,
-      },
-    });
-
-    console.log(
-      "[predev] Forced local development into single-user mode (no login required).",
-    );
-  } finally {
-    await prisma.$disconnect();
-  }
-};
-
 const main = async () => {
   const deploy = runCapture(["migrate", "deploy"]);
   if (deploy.ok) {
@@ -150,10 +114,6 @@ const main = async () => {
     } else {
       throw deploy.error;
     }
-  }
-
-  if (shouldForceSingleUserDev) {
-    await forceSingleUserDevMode();
   }
 };
 

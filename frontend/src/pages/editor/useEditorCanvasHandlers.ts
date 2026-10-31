@@ -27,24 +27,13 @@ const FILES_POLL_INTERVAL_MS = 2500;
 type CanvasHandlerRefs = {
   excalidrawAPI: MutableRefObject<any>;
   hasHydratedInitialScene: MutableRefObject<boolean>;
-  hasSceneChangesSinceLoad: MutableRefObject<boolean>;
   initialSceneElements: MutableRefObject<readonly any[]>;
   isBootstrappingScene: MutableRefObject<boolean>;
   isSyncing: MutableRefObject<boolean>;
   isUnmounting: MutableRefObject<boolean>;
-  lastLocalChangeAt: MutableRefObject<number>;
   latestAppState: MutableRefObject<any>;
   latestElements: MutableRefObject<readonly any[]>;
   latestFiles: MutableRefObject<any>;
-  debouncedSave: MutableRefObject<
-    | ((
-        drawingId: string,
-        elements: readonly any[],
-        appState: any,
-        files?: Record<string, any>,
-      ) => void)
-    | null
-  >;
   suspiciousBlankLoad: MutableRefObject<boolean>;
 };
 

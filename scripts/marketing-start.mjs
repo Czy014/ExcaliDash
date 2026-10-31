@@ -15,7 +15,6 @@ const env = {
   EXCALIDASH_DEV_SINGLE_USER: "true",
   PORT: "8107",
   FRONTEND_URL: "http://127.0.0.1:6777",
-  JWT_SECRET: randomBytes(32).toString("hex"),
   CSRF_SECRET: randomBytes(32).toString("hex"),
   UPDATE_CHECK_OUTBOUND: "false",
   RATE_LIMIT_MAX_REQUESTS: "100000",

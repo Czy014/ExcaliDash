@@ -188,8 +188,7 @@ async function failedSaveRace() {
   };
   registerDrawingCreateUpdateRoutes(app, {
     prisma,
-    requireAuth: auth,
-    optionalAuth: auth,
+    workspace: auth,
     asyncHandler,
     parseJsonField,
     drawingUpdateSchema: z.object({
@@ -222,8 +221,7 @@ async function failedSaveRace() {
   });
   registerFileRoutes(app, {
     prisma,
-    requireAuth: auth,
-    optionalAuth: auth,
+    workspace: auth,
     asyncHandler,
   });
   app.use((error, _req, res, next) => {

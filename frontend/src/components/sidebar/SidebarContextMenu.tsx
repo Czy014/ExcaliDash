@@ -1,5 +1,5 @@
 import React from "react";
-import { Edit2, Plus, Share2, Trash2 } from "lucide-react";
+import { Edit2, Plus, Trash2 } from "lucide-react";
 import type { Collection } from "../../types";
 
 export type SidebarContextMenuState = {
@@ -15,7 +15,6 @@ interface SidebarContextMenuProps {
   onClose: () => void;
   onCreateCollection: () => void;
   onRenameCollection: (collection: Collection) => void;
-  onShareCollection: (id: string) => void;
   onDeleteCollection: (id: string) => void;
 }
 
@@ -25,7 +24,6 @@ export const SidebarContextMenu: React.FC<SidebarContextMenuProps> = ({
   onClose,
   onCreateCollection,
   onRenameCollection,
-  onShareCollection,
   onDeleteCollection,
 }) => (
   <div
@@ -43,15 +41,6 @@ export const SidebarContextMenu: React.FC<SidebarContextMenuProps> = ({
     >
       {contextMenu.type === "item" && contextMenu.id ? (
         <>
-          <button
-            onClick={() => {
-              onShareCollection(contextMenu.id!);
-              onClose();
-            }}
-            className="ui-menu-item"
-          >
-            <Share2 size={14} /> Share Collection
-          </button>
           <button
             onClick={() => {
               const collection = collections.find(

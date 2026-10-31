@@ -1,8 +1,7 @@
+import { WORKSPACE_USER_ID } from "../middleware/workspace";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import request from "supertest";
-import jwt from "jsonwebtoken";
 import { PrismaClient } from "../generated/client";
-import { config } from "../config";
 import { encodeSnapshotField } from "../snapshots/snapshotCodec";
 import { cleanupTestDb, getTestPrisma, setupTestDb } from "./testUtils";
 
@@ -11,7 +10,6 @@ describe("history restore validation", () => {
   let app: any;
   let agent: any;
   let ownerId: string;
-  let token: string;
   let csrfHeader: string;
   let csrfToken: string;
   const userAgent = "vitest-history-validation";
@@ -20,13 +18,9 @@ describe("history restore validation", () => {
     setupTestDb();
     prisma = getTestPrisma();
     ({ app } = await import("../index"));
-    await prisma.systemConfig.upsert({
-      where: { id: "default" },
-      update: { authEnabled: true },
-      create: { id: "default", authEnabled: true },
-    });
     const owner = await prisma.user.create({
       data: {
+        id: WORKSPACE_USER_ID,
         email: "history-validation@test.local",
         passwordHash: "unused-test-hash",
         name: "History owner",
@@ -34,11 +28,6 @@ describe("history restore validation", () => {
       },
     });
     ownerId = owner.id;
-    token = jwt.sign(
-      { userId: owner.id, email: owner.email, type: "access" },
-      config.jwtSecret,
-      { expiresIn: "1h" },
-    );
     agent = request.agent(app);
     const csrf = await agent.get("/csrf-token").set("User-Agent", userAgent);
     csrfHeader = csrf.body.header;
@@ -89,7 +78,6 @@ describe("history restore validation", () => {
       const response = await agent
         .post(`/drawings/${drawing.id}/history/${snapshot.id}/restore`)
         .set("User-Agent", userAgent)
-        .set("Authorization", `Bearer ${token}`)
         .set(csrfHeader, csrfToken);
 
       expect(response.status).toBe(400);

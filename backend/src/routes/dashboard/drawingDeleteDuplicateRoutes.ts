@@ -14,7 +14,7 @@ export const registerDrawingDeleteDuplicateRoutes = (
 ) => {
   const {
     prisma,
-    requireAuth,
+    workspace,
     asyncHandler,
     ensureTrashCollection,
     invalidateDrawingsCache,
@@ -26,7 +26,7 @@ export const registerDrawingDeleteDuplicateRoutes = (
   } = context;
   app.delete(
     "/drawings/:id",
-    requireAuth,
+    workspace,
     asyncHandler(async (req, res) => {
       if (!req.user) return res.status(401).json({ error: "Unauthorized" });
       const { id } = req.params;
@@ -76,7 +76,7 @@ export const registerDrawingDeleteDuplicateRoutes = (
 
   app.post(
     "/drawings/:id/duplicate",
-    requireAuth,
+    workspace,
     asyncHandler(async (req, res) => {
       if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 

@@ -8,9 +8,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import * as api from "../api";
-import { useAuth } from "../context/AuthContext";
 import { GeneralAccessSection } from "./share-modal/GeneralAccessSection";
-import { SharePeopleSection } from "./share-modal/SharePeopleSection";
 import {
   calculateExpiresAt,
   DEFAULT_EDIT_EXPIRY_OPTION,
@@ -49,18 +47,12 @@ export const ShareModal: React.FC<Props> = ({
     window.addEventListener("resize", updatePosition);
     return () => window.removeEventListener("resize", updatePosition);
   }, [anchorRef, isOpen]);
-  const { user } = useAuth();
-  const currentUserId = user?.id || null;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sharing, setSharing] = useState<{
-    permissions: api.DrawingPermissionRow[];
     linkShares: api.DrawingLinkShareRow[];
   } | null>(null);
 
-  const [userQuery, setUserQuery] = useState("");
-  const [userResults, setUserResults] = useState<api.ShareResolvedUser[]>([]);
-  const [userPermission, setUserPermission] = useState<"view" | "edit">("view");
   const [linkPermission, setLinkPermission] = useState<"view" | "edit">("view");
   const [expiryOption, setExpiryOption] = useState("1h");
   const [customExpiry, setCustomExpiry] = useState("");
@@ -118,41 +110,12 @@ export const ShareModal: React.FC<Props> = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    setUserQuery("");
-    setUserResults([]);
-    setUserPermission("view");
     setLinkPermission("view");
     setExpiryOption("1h");
     setCustomExpiry("");
     setIsCopied(false);
     void refresh();
   }, [isOpen, refresh]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const q = userQuery.trim();
-    if (q.length < 3) {
-      setUserResults([]);
-      return;
-    }
-    let cancelled = false;
-    const run = async () => {
-      try {
-        const users = await api.resolveShareUsers(drawingId, q);
-        const filtered = currentUserId
-          ? users.filter((u) => u.id !== currentUserId)
-          : users;
-        if (!cancelled) setUserResults(filtered);
-      } catch {
-        if (!cancelled) setUserResults([]);
-      }
-    };
-    const t = window.setTimeout(run, 250);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(t);
-    };
-  }, [currentUserId, drawingId, isOpen, userQuery]);
 
   const handleCopy = async (text: string) => {
     if (!text) return;
@@ -174,72 +137,6 @@ export const ShareModal: React.FC<Props> = ({
       setTimeout(() => setIsCopied(false), 2000);
     } catch {
       // Clipboard access can be denied by the browser; sharing still works via visible link text.
-    }
-  };
-
-  const handleAddUser = async (uId: string) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      await api.upsertDrawingPermission(drawingId, {
-        granteeUserId: uId,
-        permission: userPermission,
-      });
-      await refresh();
-      setUserQuery("");
-      setUserResults([]);
-    } catch (err: unknown) {
-      let message = "Failed to share with user";
-      if (api.isAxiosError(err)) {
-        const serverMessage =
-          typeof err.response?.data?.message === "string"
-            ? err.response.data.message
-            : null;
-        if (serverMessage) message = serverMessage;
-      }
-      setError(message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRevokeUser = async (permissionId: string) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      await api.revokeDrawingPermission(drawingId, permissionId);
-      await refresh();
-    } catch {
-      setError("Failed to revoke access");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleUpdateUserPermission = async (
-    granteeUserId: string,
-    permission: "view" | "edit",
-  ) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      await api.upsertDrawingPermission(drawingId, {
-        granteeUserId,
-        permission,
-      });
-      await refresh();
-    } catch (err: unknown) {
-      let message = "Failed to update access";
-      if (api.isAxiosError(err)) {
-        const serverMessage =
-          typeof err.response?.data?.message === "string"
-            ? err.response.data.message
-            : null;
-        if (serverMessage) message = serverMessage;
-      }
-      setError(message);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -318,19 +215,6 @@ export const ShareModal: React.FC<Props> = ({
               {error}
             </div>
           )}
-
-          <SharePeopleSection
-            user={user}
-            sharing={sharing}
-            userQuery={userQuery}
-            userPermission={userPermission}
-            userResults={userResults}
-            setUserQuery={setUserQuery}
-            setUserPermission={setUserPermission}
-            handleAddUser={handleAddUser}
-            handleRevokeUser={handleRevokeUser}
-            handleUpdateUserPermission={handleUpdateUserPermission}
-          />
 
           <GeneralAccessSection
             activeLink={activeLink}

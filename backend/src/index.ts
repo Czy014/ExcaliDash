@@ -22,9 +22,8 @@ import {
   DrawingSanitizationError,
 } from "./security";
 import { config } from "./config";
-import { authModeService, requireAuth, optionalAuth } from "./middleware/auth";
+import { createWorkspaceMiddleware } from "./middleware/workspace";
 import { errorHandler, asyncHandler } from "./middleware/errorHandler";
-import authRouter from "./auth";
 import { logAuditEvent } from "./utils/audit";
 import { registerDashboardRoutes } from "./routes/dashboard";
 import { registerImportExportRoutes } from "./routes/importExport";
@@ -42,11 +41,11 @@ import {
   createHttpsRedirectPolicy,
   getHttpsRedirectUrl,
 } from "./server/httpsRedirectPolicy";
-import { issueBootstrapSetupCodeIfRequired } from "./auth/bootstrapSetupCode";
 import { internDrawingFiles as internDrawingFilesWithPrisma } from "./fileProcessing";
 import { initS3, isS3Enabled, checkBucketReachable } from "./s3";
 import { startScheduledBackups } from "./backups/scheduler";
 import { runStorageDoctor } from "./server/storageDoctor";
+const workspace = createWorkspaceMiddleware(prisma);
 const backendRoot = path.resolve(__dirname, "../");
 const redactDatabaseUrl = (value: string | undefined): string => {
   if (!value) return "<unset>";
@@ -260,12 +259,7 @@ app.use(
   cors({
     origin: (origin, cb) => cb(null, isAllowedOrigin(origin ?? undefined)),
     credentials: true,
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "x-csrf-token",
-      "x-imported-file",
-    ],
+    allowedHeaders: ["Content-Type", "x-csrf-token", "x-imported-file"],
     exposedHeaders: ["x-csrf-token", "x-request-id"],
   }),
 );
@@ -274,19 +268,19 @@ app.use(express.urlencoded({ extended: true, limit: BODY_LIMIT }));
 app.use((req, res, next) => {
   const requestId = req.headers["x-request-id"] || "unknown";
   const contentLength = req.headers["content-length"];
-  const userEmail = req.user?.email || "anonymous";
+  const userId = req.user?.id || "workspace";
   if (contentLength) {
     const sizeInMB = parseInt(contentLength, 10) / 1024 / 1024;
     if (sizeInMB > 10) {
       console.log(
         `[LARGE REQUEST] ${req.method} ${req.path} - ${sizeInMB.toFixed(
           2,
-        )}MB - User: ${userEmail} - RequestID: ${requestId}`,
+        )}MB - User: ${userId} - RequestID: ${requestId}`,
       );
     }
   }
   console.log(
-    `[REQUEST] ${req.method} ${req.path} - User: ${userEmail} - IP: ${req.ip} - RequestID: ${requestId}`,
+    `[REQUEST] ${req.method} ${req.path} - User: ${userId} - IP: ${req.ip} - RequestID: ${requestId}`,
   );
   next();
 });
@@ -310,7 +304,6 @@ registerCsrfProtection({
   rateLimitWindowMs: config.csrfRateLimitWindowMs,
   enableDebugLogging: config.debugCsrf,
 });
-app.use("/auth", authRouter);
 const filesFieldSchema = z
   .union([z.record(z.string(), z.unknown()), z.null()])
   .optional()
@@ -496,66 +489,10 @@ app.get("/health", async (_req, res) => {
     res.status(503).json({ status: "error", database: "unavailable" });
   }
 });
-const enableOnboardingGate =
-  config.authMode === "local" &&
-  config.nodeEnv === "production" &&
-  !config.disableOnboardingGate;
-if (enableOnboardingGate) {
-  const ONBOARDING_GATE_TTL_MS = 5_000;
-  let onboardingGateCache: { required: boolean; fetchedAt: number } | null =
-    null;
-  const isOnboardingGateBypassPath = (reqPath: string): boolean => {
-    if (reqPath === "/health") return true;
-    if (reqPath === "/csrf-token") return true;
-    if (reqPath === "/auth") return true;
-    if (reqPath.startsWith("/auth/")) return true;
-    return false;
-  };
-  const isAuthOnboardingRequired = async (): Promise<boolean> => {
-    const now = Date.now();
-    if (
-      onboardingGateCache &&
-      now - onboardingGateCache.fetchedAt < ONBOARDING_GATE_TTL_MS
-    ) {
-      return onboardingGateCache.required;
-    }
-    const systemConfig = await authModeService.ensureSystemConfig();
-    if (systemConfig.authEnabled || systemConfig.authOnboardingCompleted) {
-      onboardingGateCache = { required: false, fetchedAt: now };
-      return false;
-    }
-    const hasActiveUser = await prisma.user.findFirst({
-      where: { isActive: true },
-      select: { id: true },
-    });
-    const required = !hasActiveUser;
-    onboardingGateCache = { required, fetchedAt: now };
-    return required;
-  };
-  app.use(async (req, res, next) => {
-    try {
-      if (isOnboardingGateBypassPath(req.path)) return next();
-      const required = await isAuthOnboardingRequired();
-      if (!required) return next();
-      res.setHeader("Clear-Site-Data", '"cache"');
-      return res.status(409).json({
-        error: "Authentication onboarding required",
-        code: "AUTH_ONBOARDING_REQUIRED",
-        message:
-          "Authentication onboarding is required before using the app. Refresh the page to load the latest UI and complete setup.",
-        redirectTo: "/auth-setup",
-      });
-    } catch (error) {
-      console.error("Auth onboarding gate error:", error);
-      return next();
-    }
-  });
-}
 registerSystemRoutes(app, { asyncHandler, getBackendVersion });
 registerDashboardRoutes(app, {
   prisma,
-  requireAuth,
-  optionalAuth,
+  workspace,
   asyncHandler,
   parseJsonField,
   sanitizeText,
@@ -575,10 +512,10 @@ registerDashboardRoutes(app, {
   internDrawingFiles: (files, userId, drawingId) =>
     internDrawingFilesWithPrisma(files, userId, drawingId, prisma),
 });
-registerFileRoutes(app, { prisma, requireAuth, optionalAuth, asyncHandler });
+registerFileRoutes(app, { prisma, workspace, asyncHandler });
 registerStorageRoutes(app, {
   prisma,
-  requireAuth,
+  workspace,
   asyncHandler,
   parseJsonField,
   invalidateDrawingsCache,
@@ -586,7 +523,7 @@ registerStorageRoutes(app, {
 registerImportExportRoutes({
   app,
   prisma,
-  requireAuth,
+  workspace,
   asyncHandler,
   upload,
   uploadDir,
@@ -679,16 +616,6 @@ if (isMain) {
         isS3Enabled,
         probeBucket: () => checkBucketReachable(),
       });
-      try {
-        await issueBootstrapSetupCodeIfRequired({
-          prisma,
-          ttlMs: config.bootstrapSetupCodeTtlMs,
-          authMode: config.authMode,
-          reason: "startup",
-        });
-      } catch (error) {
-        console.error("Failed to issue bootstrap setup code:", error);
-      }
       console.log(`Server running on port ${PORT}`);
       console.log(`Environment: ${config.nodeEnv}`);
       console.log(`Frontend URL: ${config.frontendUrl}`);

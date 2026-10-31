@@ -1,11 +1,5 @@
 import type React from "react";
-import {
-  ArchiveRestore,
-  ChevronRight,
-  Info,
-  ShieldCheck,
-  Upload,
-} from "lucide-react";
+import { ArchiveRestore, ChevronRight, Info, Upload } from "lucide-react";
 import { SettingsRow, settingsButtonClass } from "./SettingsRow";
 import { importLegacyFiles } from "../../utils/importUtils";
 
@@ -13,35 +7,23 @@ type DialogState = { isOpen: boolean; message: string };
 type SuccessDialogState = { isOpen: boolean; message: React.ReactNode };
 
 type AdvancedSettingsProps = {
-  authEnabled: boolean | null;
-  authMode: string | null | undefined;
-  authToggleLoading: boolean;
   backupImportLoading: boolean;
   legacyDbImportLoading: boolean;
-  isManagedAuthMode: boolean;
-  user: { role?: string } | null | undefined;
   appVersion: string;
   buildLabel: string | undefined;
   verifyBackupFile: (file: File) => Promise<void>;
   verifyLegacyDbFile: (file: File) => Promise<void>;
-  confirmToggleAuthEnabled: () => void;
   setImportError: React.Dispatch<React.SetStateAction<DialogState>>;
   setImportSuccess: React.Dispatch<React.SetStateAction<SuccessDialogState>>;
 };
 
 export const AdvancedSettings = ({
-  authEnabled,
-  authMode,
-  authToggleLoading,
   backupImportLoading,
   legacyDbImportLoading,
-  isManagedAuthMode,
-  user,
   appVersion,
   buildLabel,
   verifyBackupFile,
   verifyLegacyDbFile,
-  confirmToggleAuthEnabled,
   setImportError,
   setImportSuccess,
 }: AdvancedSettingsProps) => (
@@ -58,7 +40,7 @@ export const AdvancedSettings = ({
         icon={<Upload size={20} />}
         tileClassName="border-black bg-blue-400 text-black dark:border-neutral-700 dark:bg-blue-400 dark:text-black"
         title="Import backup"
-        description="Merge a .excalidash backup into your account"
+        description="Merge a .excalidash backup into your workspace"
       >
         <input
           type="file"
@@ -138,40 +120,6 @@ export const AdvancedSettings = ({
           className={settingsButtonClass}
         >
           {legacyDbImportLoading ? "Verifying…" : "Choose files"}
-        </button>
-      </SettingsRow>
-
-      <SettingsRow
-        icon={<ShieldCheck size={20} />}
-        tileClassName="border-black bg-slate-300 text-black dark:border-neutral-700 dark:bg-neutral-700 dark:text-white"
-        title={authEnabled ? "Authentication on" : "Authentication off"}
-        description={
-          isManagedAuthMode
-            ? `Managed by AUTH_MODE=${authMode}`
-            : authEnabled
-              ? user?.role === "ADMIN"
-                ? "Multi-user login enabled"
-                : "Only admins can disable"
-              : "Single-user mode"
-        }
-      >
-        <button
-          onClick={confirmToggleAuthEnabled}
-          disabled={
-            isManagedAuthMode ||
-            authEnabled === null ||
-            authToggleLoading ||
-            (authEnabled === true && user?.role !== "ADMIN")
-          }
-          className={settingsButtonClass}
-        >
-          {authToggleLoading
-            ? authEnabled
-              ? "Disabling…"
-              : "Enabling…"
-            : authEnabled
-              ? "Disable"
-              : "Enable"}
         </button>
       </SettingsRow>
 

@@ -12,9 +12,6 @@ vi.mock("react-router-dom", () => ({
   useLocation: vi.fn(),
 }));
 vi.mock("@excalidraw/excalidraw", () => ({ exportToSvg: vi.fn() }));
-vi.mock("../src/context/AuthContext", () => ({
-  useAuth: () => ({ user: null }),
-}));
 vi.mock("../src/api", () => ({
   getDrawing: vi.fn(),
   updateDrawing: vi.fn(),
@@ -92,7 +89,6 @@ const makeHarness = (initial = [element("local")]) => {
       drawingId,
       canEdit,
       refs,
-      user: null,
       drafts,
       normalizeImageElementStatus: (elements = []) => elements,
       resolveSafeSnapshot: (snapshot = []) => ({

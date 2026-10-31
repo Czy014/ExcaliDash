@@ -125,7 +125,7 @@ describe("File reference lifetime", () => {
   const mountStorage = () =>
     registerStorageRoutes(app, {
       prisma,
-      requireAuth: auth,
+      workspace: auth,
       asyncHandler,
       parseJsonField,
       invalidateDrawingsCache: vi.fn(),
@@ -136,8 +136,7 @@ describe("File reference lifetime", () => {
   ) =>
     registerDrawingCreateUpdateRoutes(app, {
       prisma,
-      requireAuth: auth,
-      optionalAuth: auth,
+      workspace: auth,
       asyncHandler,
       parseJsonField,
       drawingUpdateSchema: z.object({
@@ -146,7 +145,6 @@ describe("File reference lifetime", () => {
         version: z.number().optional(),
       }),
       getRequestPrincipal: async () => ({ kind: "user", userId: ownerId }),
-      respondWithAuthErrorIfPresent: () => false,
       invalidateDrawingsCache: vi.fn(),
       config: { nodeEnv: "test" },
       internDrawingFiles: internFiles,
@@ -155,12 +153,11 @@ describe("File reference lifetime", () => {
   const mountFiles = () =>
     registerFileRoutes(app, {
       prisma,
-      requireAuth: auth,
-      optionalAuth: auth,
+      workspace: auth,
       asyncHandler,
     });
 
-  it("lists a collaborator's first raw S3 upload in the drawing owner's storage namespace", async () => {
+  it("lists a link editor's first raw S3 upload in the drawing owner's storage namespace", async () => {
     vi.mocked(isS3Enabled).mockReturnValue(true);
     const peer = await prisma.user.create({
       data: {
@@ -170,14 +167,15 @@ describe("File reference lifetime", () => {
       },
     });
     const drawing = await createDrawing();
-    await prisma.drawingPermission.create({
+    await prisma.drawingLinkShare.create({
       data: {
         drawingId: drawing.id,
-        granteeUserId: peer.id,
-        permission: "edit",
         createdByUserId: ownerId,
+        tokenHash: "test-link-hash",
+        permission: "edit",
       },
     });
+
     auth = (req, _res, next) => {
       req.user = {
         id: req.headers["x-test-user-id"] || ownerId,
@@ -944,8 +942,7 @@ describe("File reference lifetime", () => {
     const drawing = await createDrawing();
     registerDrawingCreateUpdateRoutes(app, {
       prisma,
-      requireAuth: auth,
-      optionalAuth: auth,
+      workspace: auth,
       asyncHandler,
       parseJsonField,
       drawingUpdateSchema: z.object({
@@ -954,7 +951,6 @@ describe("File reference lifetime", () => {
         version: z.number(),
       }),
       getRequestPrincipal: async () => ({ kind: "user", userId: ownerId }),
-      respondWithAuthErrorIfPresent: () => false,
       invalidateDrawingsCache: vi.fn(),
       config: { nodeEnv: "test" },
       internDrawingFiles: async (

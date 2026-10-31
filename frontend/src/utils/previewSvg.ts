@@ -85,7 +85,7 @@ export const previewHasOrphanedImages = (preview: string): boolean => {
 };
 
 // SVG image references need inline bytes to render reliably in thumbnails,
-// including files served through an authenticated endpoint or S3 redirect.
+// including files served through an access-checked endpoint or S3 redirect.
 export const rehydratePreviewSvg = async (preview: string): Promise<string> => {
   const doc = new DOMParser().parseFromString(preview, "image/svg+xml");
   if (doc.documentElement.tagName.toLowerCase() !== "svg") return preview;

@@ -29,7 +29,7 @@ export { collectRetainedDrawingFileIds } from "./storage/retainedFiles";
 
 export type StorageRouteDeps = {
   prisma: PrismaClient;
-  requireAuth: express.RequestHandler;
+  workspace: express.RequestHandler;
   asyncHandler: <T = void>(
     fn: (
       req: express.Request,
@@ -47,7 +47,7 @@ export const registerStorageRoutes = (
 ): void => {
   const {
     prisma,
-    requireAuth,
+    workspace,
     asyncHandler,
     parseJsonField,
     invalidateDrawingsCache,
@@ -58,7 +58,7 @@ export const registerStorageRoutes = (
   // ------------------------------------------------------------------
   app.post(
     "/drawings/:id/trim",
-    requireAuth,
+    workspace,
     asyncHandler(async (req, res) => {
       const userId = req.user?.id;
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
@@ -176,7 +176,7 @@ export const registerStorageRoutes = (
   // ------------------------------------------------------------------
   app.get(
     "/drawings/:id/files/diff",
-    requireAuth,
+    workspace,
     asyncHandler(async (req, res) => {
       const userId = req.user?.id;
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
@@ -223,7 +223,7 @@ export const registerStorageRoutes = (
   // ------------------------------------------------------------------
   app.delete(
     "/drawings/:id/files/orphans",
-    requireAuth,
+    workspace,
     asyncHandler(async (req, res) => {
       const userId = req.user?.id;
       if (!userId) return res.status(401).json({ error: "Unauthorized" });

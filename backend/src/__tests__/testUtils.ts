@@ -113,8 +113,7 @@ export const createTestUser = async (
   prisma: PrismaClient,
   email: string = "test@example.com",
 ) => {
-  const bcrypt = require("bcrypt");
-  const passwordHash = await bcrypt.hash("testpassword", 10);
+  const passwordHash = "unused";
 
   return await prisma.user.upsert({
     where: { email },

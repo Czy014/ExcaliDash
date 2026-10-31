@@ -5,10 +5,6 @@ import clsx from "clsx";
 interface NewDrawingControlProps {
   disabled: boolean;
   onCreate: () => void;
-  // Optional gate run before creating. Return false to abort (e.g. a viewer
-  // in a read-only shared collection); the gate is responsible for surfacing
-  // its own message.
-  canCreate?: () => boolean;
 }
 
 const BASE_BUTTON =
@@ -23,14 +19,10 @@ const DISABLED_BUTTON =
 export const NewDrawingControl: React.FC<NewDrawingControlProps> = ({
   disabled,
   onCreate,
-  canCreate,
 }) => {
   return (
     <button
-      onClick={() => {
-        if (canCreate && !canCreate()) return;
-        onCreate();
-      }}
+      onClick={onCreate}
       disabled={disabled}
       className={clsx(
         BASE_BUTTON,

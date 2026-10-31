@@ -57,7 +57,7 @@ export default defineConfig({
         items: [
           { text: "Quick start", link: "/guide/quick-start" },
           { text: "First run", link: "/guide/first-run" },
-          { text: "Authentication", link: "/guide/authentication" },
+          { text: "Single-user access", link: "/guide/authentication" },
           { text: "Configuration", link: "/guide/configuration" },
           { text: "Personal editing", link: "/guide/personal-editing" },
           { text: "Sharing", link: "/guide/collaboration" },

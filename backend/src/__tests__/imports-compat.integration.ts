@@ -20,7 +20,7 @@ import {
   openWritableDb,
 } from "./importsCompatFixtures";
 import { getTestPrisma, setupTestDb, cleanupTestDb } from "./testUtils";
-import { BOOTSTRAP_USER_ID } from "../auth/authMode";
+import { WORKSPACE_USER_ID } from "../middleware/workspace";
 import { downloadBuffer } from "../s3";
 import { decodeSnapshotField } from "../snapshots/snapshotCodec";
 import { replaceImportedDrawing } from "../routes/importExport/shared";
@@ -116,7 +116,7 @@ describe("Import compatibility (legacy exports)", () => {
       select: { id: true, name: true, collectionId: true, userId: true },
     });
 
-    expect(importedDrawings.every((d) => d.userId === BOOTSTRAP_USER_ID)).toBe(
+    expect(importedDrawings.every((d) => d.userId === WORKSPACE_USER_ID)).toBe(
       true,
     );
     expect(importedDrawings.map((d) => d.id)).toEqual(
@@ -128,7 +128,7 @@ describe("Import compatibility (legacy exports)", () => {
     );
 
     const trash = await prisma.collection.findUnique({
-      where: { id: `trash:${BOOTSTRAP_USER_ID}` },
+      where: { id: `trash:${WORKSPACE_USER_ID}` },
     });
     expect(trash).toBeTruthy();
   });
@@ -270,7 +270,7 @@ describe("Import compatibility (legacy exports)", () => {
           },
         }),
         version: 7,
-        userId: BOOTSTRAP_USER_ID,
+        userId: WORKSPACE_USER_ID,
       },
     });
     await prisma.drawingFile.create({
@@ -687,7 +687,7 @@ describe("Import compatibility (legacy exports)", () => {
         appState: JSON.stringify({}),
         files: "{}",
         version: 1,
-        userId: BOOTSTRAP_USER_ID,
+        userId: WORKSPACE_USER_ID,
       },
     });
 
@@ -732,7 +732,7 @@ describe("Import compatibility (legacy exports)", () => {
           },
         }),
         version: 1,
-        userId: BOOTSTRAP_USER_ID,
+        userId: WORKSPACE_USER_ID,
       },
     });
     await prisma.drawingFile.create({
@@ -776,7 +776,7 @@ describe("Import compatibility (legacy exports)", () => {
         ]),
         appState: "{}",
         files: JSON.stringify(files),
-        userId: BOOTSTRAP_USER_ID,
+        userId: WORKSPACE_USER_ID,
       },
     });
 

@@ -23,8 +23,7 @@ export const registerDrawingCreateUpdateRoutes = (
 ) => {
   const {
     prisma,
-    requireAuth,
-    optionalAuth,
+    workspace,
     asyncHandler,
     validateImportedDrawing,
     drawingCreateSchema,
@@ -36,7 +35,6 @@ export const registerDrawingCreateUpdateRoutes = (
     internDrawingFiles,
     parseJsonField,
     getRequestPrincipal,
-    respondWithAuthErrorIfPresent,
   } = context;
 
   // Compensate only failed creation under this request's unpublished UUID.
@@ -80,7 +78,7 @@ export const registerDrawingCreateUpdateRoutes = (
   };
   app.post(
     "/drawings",
-    requireAuth,
+    workspace,
     asyncHandler(async (req, res) => {
       if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 
@@ -123,19 +121,8 @@ export const registerDrawingCreateUpdateRoutes = (
         if (!collection)
           return res.status(404).json({ error: "Collection not found" });
 
-        // If the collection belongs to someone else, check the user has editor access
         if (collection.userId !== req.user.id) {
-          const share = await prisma.collectionShare.findFirst({
-            where: {
-              collectionId: targetCollectionId,
-              granteeUserId: req.user.id,
-              role: "edit",
-            },
-          });
-          if (!share)
-            return res
-              .status(403)
-              .json({ error: "No edit access to this collection" });
+          return res.status(404).json({ error: "Collection not found" });
         }
       } else if (targetCollectionIdRaw === "trash") {
         await ensureTrashCollection(prisma, req.user.id);
@@ -196,7 +183,7 @@ export const registerDrawingCreateUpdateRoutes = (
 
   app.put(
     "/drawings/:id",
-    optionalAuth,
+    workspace,
     asyncHandler(async (req, res) => {
       const principal = await getRequestPrincipal(req);
 
@@ -207,7 +194,6 @@ export const registerDrawingCreateUpdateRoutes = (
         drawingId: id,
       });
       if (!canEditDrawing(access)) {
-        if (respondWithAuthErrorIfPresent(req, res)) return;
         return res.status(404).json({
           error: "Drawing not found",
           message: "Drawing does not exist",
@@ -330,17 +316,7 @@ export const registerDrawingCreateUpdateRoutes = (
             where: { id: payload.collectionId, userId: actingUserId },
           });
           if (!ownedCollection) {
-            const editableShare = await prisma.collectionShare.findFirst({
-              where: {
-                collectionId: payload.collectionId,
-                granteeUserId: actingUserId,
-                role: "edit",
-              },
-              select: { id: true },
-            });
-            if (!editableShare) {
-              return res.status(404).json({ error: "Collection not found" });
-            }
+            return res.status(404).json({ error: "Collection not found" });
           }
           (data as Prisma.DrawingUncheckedUpdateInput).collectionId =
             payload.collectionId;

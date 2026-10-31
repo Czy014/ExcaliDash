@@ -10,7 +10,6 @@ type AccessLevel = "none" | "view" | "edit" | "owner";
 
 type SceneLoaderParams = {
   id: string | undefined;
-  user: unknown;
   location: {
     pathname: string;
     search: string;
@@ -65,7 +64,6 @@ export type SceneLoaderRefs = SceneLoaderParams["refs"];
 
 export const useEditorSceneLoader = ({
   id,
-  user,
   location,
   navigate,
   refs,
@@ -101,15 +99,6 @@ export const useEditorSceneLoader = ({
     refs.excalidrawAPI.current = null;
   }, [refs]);
 
-  // Depend on the user id scalar, not the user object identity: a new object
-  // reference for the same logged-in user must not re-run the loader (which
-  // would reset refs and re-fetch mid-session).
-  const userId =
-    typeof user === "object" && user !== null && "id" in user
-      ? (user as { id?: unknown }).id
-      : undefined;
-  const userIdKey = typeof userId === "string" ? userId : null;
-
   useEffect(() => {
     // A slow, stale load must never write its result into the persistence refs
     // after the user has navigated to a different drawing — that is how one
@@ -131,12 +120,10 @@ export const useEditorSceneLoader = ({
         return;
       }
       try {
-        const libraryItemsPromise = userIdKey
-          ? api.getLibrary().catch((err) => {
-              console.warn("Failed to load library, using empty:", err);
-              return [];
-            })
-          : Promise.resolve([]);
+        const libraryItemsPromise = api.getLibrary().catch((err) => {
+          console.warn("Failed to load library, using empty:", err);
+          return [];
+        });
         const [data, libraryItems] = await Promise.all([
           api.getDrawing(id),
           libraryItemsPromise,
@@ -336,7 +323,6 @@ export const useEditorSceneLoader = ({
     setIsReady,
     setIsSceneLoading,
     setLoadError,
-    userIdKey,
   ]);
   return { invalidateFileLoads };
 };

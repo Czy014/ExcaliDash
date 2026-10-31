@@ -27,7 +27,6 @@ type BackupImportConfirmation = {
 
 type DialogState = { isOpen: boolean; message: string };
 type SuccessDialogState = { isOpen: boolean; message: React.ReactNode };
-type AuthToggleConfirm = { isOpen: boolean; nextEnabled: boolean | null };
 
 type SettingsConfirmModalsProps = {
   legacyDbImportConfirmation: LegacyDbImportConfirmation;
@@ -38,11 +37,6 @@ type SettingsConfirmModalsProps = {
   setImportError: React.Dispatch<React.SetStateAction<DialogState>>;
   importSuccess: SuccessDialogState;
   setImportSuccess: React.Dispatch<React.SetStateAction<SuccessDialogState>>;
-  authToggleConfirm: AuthToggleConfirm;
-  setAuthToggleConfirm: React.Dispatch<React.SetStateAction<AuthToggleConfirm>>;
-  authDisableFinalConfirmOpen: boolean;
-  setAuthDisableFinalConfirmOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  setAuthEnabled: (enabled: boolean) => Promise<void>;
   backupImportConfirmation: BackupImportConfirmation;
   setBackupImportConfirmation: React.Dispatch<
     React.SetStateAction<BackupImportConfirmation>
@@ -61,11 +55,6 @@ export const SettingsConfirmModals = ({
   setImportError,
   importSuccess,
   setImportSuccess,
-  authToggleConfirm,
-  setAuthToggleConfirm,
-  authDisableFinalConfirmOpen,
-  setAuthDisableFinalConfirmOpen,
-  setAuthEnabled,
   backupImportConfirmation,
   setBackupImportConfirmation,
   backupImportSuccess,
@@ -81,7 +70,7 @@ export const SettingsConfirmModals = ({
       message={
         <div className="space-y-2 text-left">
           <div>
-            This merges legacy data into your account without replacing the
+            This merges legacy data into your workspace without replacing the
             server database.
           </div>
           {legacyDbImportConfirmation.info && (
@@ -164,75 +153,12 @@ export const SettingsConfirmModals = ({
       onCancel={() => setImportSuccess({ isOpen: false, message: "" })}
     />
     <ConfirmModal
-      isOpen={authToggleConfirm.isOpen}
-      title={
-        authToggleConfirm.nextEnabled
-          ? "Enable authentication?"
-          : "Disable authentication?"
-      }
-      message={
-        authToggleConfirm.nextEnabled ? (
-          "This will require users to sign in. You will be prompted to set up an admin account immediately."
-        ) : (
-          <div className="space-y-2 text-left">
-            <div>
-              This will turn off authentication for the entire instance.
-            </div>
-            <div className="font-semibold text-rose-700 dark:text-rose-300">
-              Recommendation: keep authentication enabled unless this instance
-              is fully private.
-            </div>
-          </div>
-        )
-      }
-      confirmText={authToggleConfirm.nextEnabled ? "Enable" : "Continue"}
-      cancelText="Cancel"
-      isDangerous={!authToggleConfirm.nextEnabled}
-      onConfirm={async () => {
-        const nextEnabled = authToggleConfirm.nextEnabled;
-        setAuthToggleConfirm({ isOpen: false, nextEnabled: null });
-        if (typeof nextEnabled !== "boolean") return;
-        if (!nextEnabled) {
-          setAuthDisableFinalConfirmOpen(true);
-          return;
-        }
-        await setAuthEnabled(nextEnabled);
-      }}
-      onCancel={() =>
-        setAuthToggleConfirm({ isOpen: false, nextEnabled: null })
-      }
-    />
-    <ConfirmModal
-      isOpen={authDisableFinalConfirmOpen}
-      title="Final warning: disable authentication?"
-      message={
-        <div className="space-y-2 text-left">
-          <div>
-            With authentication off, any user who can access this URL can view
-            and modify all drawings and settings. They can also turn
-            authentication back on and lock you out.
-          </div>
-          <div className="font-semibold text-rose-700 dark:text-rose-300">
-            This is only safe on a trusted private network.
-          </div>
-        </div>
-      }
-      confirmText="Disable Authentication"
-      cancelText="Keep Enabled (Recommended)"
-      isDangerous
-      onConfirm={async () => {
-        setAuthDisableFinalConfirmOpen(false);
-        await setAuthEnabled(false);
-      }}
-      onCancel={() => setAuthDisableFinalConfirmOpen(false)}
-    />
-    <ConfirmModal
       isOpen={backupImportConfirmation.isOpen}
       title="Import backup?"
       message={
         backupImportConfirmation.info
           ? `This will merge ${backupImportConfirmation.info.collections} collection(s) and ${backupImportConfirmation.info.drawings} drawing(s) from a Format v${backupImportConfirmation.info.formatVersion} backup exported at ${backupImportConfirmation.info.exportedAt}.`
-          : "This will merge the backup into your account."
+          : "This will merge the backup into your workspace."
       }
       confirmText="Import"
       cancelText="Cancel"

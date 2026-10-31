@@ -31,7 +31,10 @@ for (const language of ["en", "zh-CN"]) {
       }, language);
       const sharedRequests: string[] = [];
       page.on("request", (request) => {
-        if (new URL(request.url()).pathname === "/api/drawings/shared")
+        if (
+          new URL(request.url()).pathname === "/api/drawings/shared" ||
+          new URL(request.url()).pathname.startsWith("/api/auth/")
+        )
           sharedRequests.push(request.url());
       });
       const openSidebar = async () => {
@@ -75,6 +78,12 @@ for (const language of ["en", "zh-CN"]) {
         ).toBeVisible();
         await expect(
           page.getByRole("region", { name: "Account security", exact: true }),
+        ).toHaveCount(0);
+        await expect(
+          page.getByRole("heading", { name: "API keys", exact: true }),
+        ).toHaveCount(0);
+        await expect(
+          page.getByText("Authentication off", { exact: true }),
         ).toHaveCount(0);
         await expect(page.getByLabel("New email", { exact: true })).toHaveCount(
           0,

@@ -17,7 +17,7 @@ export const registerExcalidashExportRoute = (
   const {
     app,
     prisma,
-    requireAuth,
+    workspace,
     asyncHandler,
     getBackendVersion,
     parseJsonField,
@@ -25,7 +25,7 @@ export const registerExcalidashExportRoute = (
 
   app.get(
     "/export/excalidash",
-    requireAuth,
+    workspace,
     asyncHandler(async (req, res) => {
       if (!req.user) return res.status(401).json({ error: "Unauthorized" });
       const trashCollectionId = getUserTrashCollectionId(req.user.id);

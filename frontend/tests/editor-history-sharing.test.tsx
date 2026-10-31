@@ -58,9 +58,6 @@ vi.mock("../src/pages/editor/keepaliveSave", () => ({
   saveDrawingKeepalive: vi.fn(),
 }));
 vi.mock("react-router-dom", () => ({ useNavigate: () => vi.fn() }));
-vi.mock("../src/context/AuthContext", () => ({
-  useAuth: () => ({ user: null }),
-}));
 vi.mock("../src/components/LanguageSelector", () => ({
   LanguageSelector: () => null,
 }));
@@ -184,7 +181,6 @@ function persistenceHarness() {
     const nextPersistence = useEditorPersistence({
       drawingId: "drawing",
       canEdit: true,
-      user: null,
       drafts,
       refs,
       normalizeImageElementStatus: (elements = []) => elements,
@@ -197,7 +193,6 @@ function persistenceHarness() {
       drawingName: "Drawing",
       isSavingOnLeave: false,
       newName: "Drawing",
-      user: null,
       refs: {
         ...refs,
         canSave: nextPersistence.canSave,

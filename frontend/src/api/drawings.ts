@@ -193,28 +193,6 @@ export const getDrawingPreview = async (id: string): Promise<string | null> => {
   return typeof preview === "string" ? normalizePreviewSvg(preview) : null;
 };
 
-export type ShareResolvedUser = { id: string; name: string; email: string };
-
-export const resolveShareUsers = async (
-  drawingId: string,
-  q: string,
-): Promise<ShareResolvedUser[]> => {
-  const response = await api.get<{ users: ShareResolvedUser[] }>(
-    `/drawings/${drawingId}/share-resolve`,
-    { params: { q } },
-  );
-  return response.data.users;
-};
-
-export type DrawingPermissionRow = {
-  id: string;
-  granteeUserId: string;
-  permission: "view" | "edit";
-  createdAt: string | number | Date;
-  updatedAt: string | number | Date;
-  granteeUser: ShareResolvedUser;
-};
-
 export type DrawingLinkShareRow = {
   id: string;
   permission: "view" | "edit";
@@ -228,34 +206,11 @@ export type DrawingLinkShareRow = {
 export const getDrawingSharing = async (
   drawingId: string,
 ): Promise<{
-  permissions: DrawingPermissionRow[];
   linkShares: DrawingLinkShareRow[];
 }> => {
   const response = await api.get<{
-    permissions: DrawingPermissionRow[];
     linkShares: DrawingLinkShareRow[];
   }>(`/drawings/${drawingId}/sharing`);
-  return response.data;
-};
-
-export const upsertDrawingPermission = async (
-  drawingId: string,
-  params: { granteeUserId: string; permission: "view" | "edit" },
-): Promise<{ permission: DrawingPermissionRow }> => {
-  const response = await api.post<{ permission: DrawingPermissionRow }>(
-    `/drawings/${drawingId}/permissions`,
-    params,
-  );
-  return response.data;
-};
-
-export const revokeDrawingPermission = async (
-  drawingId: string,
-  permissionId: string,
-): Promise<{ success: true }> => {
-  const response = await api.delete<{ success: true }>(
-    `/drawings/${drawingId}/permissions/${permissionId}`,
-  );
   return response.data;
 };
 

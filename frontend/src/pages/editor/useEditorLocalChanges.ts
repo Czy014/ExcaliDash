@@ -5,7 +5,6 @@ import { getFilesDelta } from "./shared";
 type UseEditorLocalChangesParams = {
   drawingId: string | undefined;
   excalidrawAPI: MutableRefObject<any>;
-  lastLocalChangeAtRef: MutableRefObject<number>;
   lastSyncedElementOrderSigRef: MutableRefObject<string>;
   lastSyncedFilesRef: MutableRefObject<Record<string, any>>;
   latestAppStateRef: MutableRefObject<any>;
@@ -25,13 +24,12 @@ type UseEditorLocalChangesParams = {
     files?: Record<string, any> | null,
   ) => readonly any[];
   recordElementVersion: (element: any) => void;
-  setHasSceneChangesSinceLoad: () => void;
+  markChanged: () => void;
 };
 
 export const useEditorLocalChanges = ({
   drawingId,
   excalidrawAPI,
-  lastLocalChangeAtRef,
   lastSyncedElementOrderSigRef,
   lastSyncedFilesRef,
   latestAppStateRef,
@@ -43,7 +41,7 @@ export const useEditorLocalChanges = ({
   hasElementChanged,
   normalizeImageElementStatus,
   recordElementVersion,
-  setHasSceneChangesSinceLoad,
+  markChanged,
 }: UseEditorLocalChangesParams) => {
   const recordLocalChanges = useCallback(
     (
@@ -86,8 +84,7 @@ export const useEditorLocalChanges = ({
         appStateChanged
       ) {
         latestElementsRef.current = normalizedElements;
-        setHasSceneChangesSinceLoad();
-        lastLocalChangeAtRef.current = new Date().getTime();
+        markChanged();
         if (appState) {
           debouncedSave(drawingId, normalizedElements, appState, nextFiles);
           debouncedSavePreview(drawingId);
@@ -101,7 +98,6 @@ export const useEditorLocalChanges = ({
       drawingId,
       excalidrawAPI,
       hasElementChanged,
-      lastLocalChangeAtRef,
       lastSyncedElementOrderSigRef,
       lastSyncedFilesRef,
       latestAppStateRef,
@@ -109,7 +105,7 @@ export const useEditorLocalChanges = ({
       latestElementsRef,
       normalizeImageElementStatus,
       recordElementVersion,
-      setHasSceneChangesSinceLoad,
+      markChanged,
     ],
   );
 

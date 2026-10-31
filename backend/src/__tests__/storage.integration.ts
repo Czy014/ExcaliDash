@@ -1,3 +1,4 @@
+import { WORKSPACE_USER_ID } from "../middleware/workspace";
 /**
  * Integration tests for storage management routes:
  *   POST   /drawings/:id/trim
@@ -16,11 +17,7 @@
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import request from "supertest";
-import bcrypt from "bcrypt";
-import jwt, { SignOptions } from "jsonwebtoken";
-import { StringValue } from "ms";
 import { PrismaClient } from "../generated/client";
-import { config } from "../config";
 import { getTestPrisma, setupTestDb, cleanupTestDb } from "./testUtils";
 import { encodeSnapshotField } from "../snapshots/snapshotCodec";
 
@@ -33,15 +30,6 @@ describe("Storage management routes", () => {
   let csrfToken: string;
   let owner: { id: string; email: string };
   let other: { id: string; email: string };
-  let ownerToken: string;
-  let otherToken: string;
-
-  const signToken = (userId: string, email: string) => {
-    const opts: SignOptions = {
-      expiresIn: config.jwtAccessExpiresIn as StringValue,
-    };
-    return jwt.sign({ userId, email, type: "access" }, config.jwtSecret, opts);
-  };
 
   const createDrawing = async (
     userId: string,
@@ -87,17 +75,7 @@ describe("Storage management routes", () => {
     prisma = getTestPrisma();
     ({ app } = await import("../index"));
 
-    await prisma.systemConfig.upsert({
-      where: { id: "default" },
-      update: { authEnabled: true, registrationEnabled: false },
-      create: {
-        id: "default",
-        authEnabled: true,
-        registrationEnabled: false,
-      },
-    });
-
-    // CSRF middleware rejects unauth'd state-changing requests; obtain a
+    // CSRF middleware protects state-changing requests; obtain a
     // token once and reuse it on every mutating call.
     agent = request.agent(app);
     const csrfRes = await agent.get("/csrf-token").set("User-Agent", userAgent);
@@ -114,9 +92,10 @@ describe("Storage management routes", () => {
     await prisma.drawingFile.deleteMany({});
     await prisma.user.deleteMany({});
 
-    const passwordHash = await bcrypt.hash("password123", 10);
+    const passwordHash = "unused";
     const ownerRow = await prisma.user.create({
       data: {
+        id: WORKSPACE_USER_ID,
         email: "owner@test.local",
         passwordHash,
         name: "Owner",
@@ -137,8 +116,6 @@ describe("Storage management routes", () => {
     });
     owner = ownerRow;
     other = otherRow;
-    ownerToken = signToken(owner.id, owner.email);
-    otherToken = signToken(other.id, other.email);
   });
 
   describe("POST /drawings/:id/trim", () => {
@@ -197,7 +174,6 @@ describe("Storage management routes", () => {
           .post(`/drawings/${drawing.id}/trim`)
           .set("User-Agent", userAgent)
           .set(csrfHeaderName, csrfToken)
-          .set("Authorization", `Bearer ${ownerToken}`)
           .send({ confirmName: drawing.name });
         expect(res.status).toBe(200);
         expect(
@@ -205,24 +181,17 @@ describe("Storage management routes", () => {
             where: { drawingId: drawing.id, fileId: "unreferenced" },
           }),
         ).toBe(0);
-        const image = await agent
-          .get(`/files/${drawing.id}/historical`)
-          .set("Authorization", `Bearer ${ownerToken}`);
+        const image = await agent.get(`/files/${drawing.id}/historical`);
         expect(image.status).toBe(200);
         expect(Buffer.from(image.body).equals(bytes)).toBe(true);
         const restore = await agent
           .post(`/drawings/${drawing.id}/history/${snapshot.id}/restore`)
           .set("User-Agent", userAgent)
           .set(csrfHeaderName, csrfToken)
-          .set("Authorization", `Bearer ${ownerToken}`)
           .send({});
         expect(restore.status).toBe(200);
         expect(
-          (
-            await agent
-              .get(`/files/${drawing.id}/historical`)
-              .set("Authorization", `Bearer ${ownerToken}`)
-          ).status,
+          (await agent.get(`/files/${drawing.id}/historical`)).status,
         ).toBe(200);
       },
     );
@@ -245,7 +214,6 @@ describe("Storage management routes", () => {
         .post(`/drawings/${drawing.id}/trim`)
         .set("User-Agent", userAgent)
         .set(csrfHeaderName, csrfToken)
-        .set("Authorization", `Bearer ${ownerToken}`)
         .send({ confirmName: "Trim Me" });
 
       expect(res.status).toBe(200);
@@ -273,20 +241,18 @@ describe("Storage management routes", () => {
         .post(`/drawings/${drawing.id}/trim`)
         .set("User-Agent", userAgent)
         .set(csrfHeaderName, csrfToken)
-        .set("Authorization", `Bearer ${ownerToken}`)
         .send({ confirmName: "Wrong Name" });
 
       expect(res.status).toBe(403);
     });
 
-    it("returns 404 when caller is not the owner", async () => {
-      const drawing = await createDrawing(owner.id);
+    it("returns 404 for a historical user drawing", async () => {
+      const drawing = await createDrawing(other.id);
 
       const res = await agent
         .post(`/drawings/${drawing.id}/trim`)
         .set("User-Agent", userAgent)
         .set(csrfHeaderName, csrfToken)
-        .set("Authorization", `Bearer ${otherToken}`)
         .send({ confirmName: drawing.name });
 
       expect(res.status).toBe(404);
@@ -331,16 +297,13 @@ describe("Storage management routes", () => {
         .delete(`/drawings/${drawing.id}/files/orphans`)
         .set("User-Agent", userAgent)
         .set(csrfHeaderName, csrfToken)
-        .set("Authorization", `Bearer ${ownerToken}`)
         .send({ confirmName: drawing.name, fileIds: ["historical"] });
       expect(res.status).toBe(200);
       const current = await prisma.drawing.findUniqueOrThrow({
         where: { id: drawing.id },
       });
       expect(JSON.parse(current.files)).toEqual({});
-      const image = await agent
-        .get(`/files/${drawing.id}/historical`)
-        .set("Authorization", `Bearer ${ownerToken}`);
+      const image = await agent.get(`/files/${drawing.id}/historical`);
       expect(image.status).toBe(200);
       expect(Buffer.from(image.body).equals(bytes)).toBe(true);
     });
@@ -362,7 +325,6 @@ describe("Storage management routes", () => {
         .delete(`/drawings/${drawing.id}/files/orphans`)
         .set("User-Agent", userAgent)
         .set(csrfHeaderName, csrfToken)
-        .set("Authorization", `Bearer ${ownerToken}`)
         .send({ confirmName: "Orphan Cleanup", fileIds: ["file-orphan"] });
 
       expect(res.status).toBe(200);
@@ -392,7 +354,6 @@ describe("Storage management routes", () => {
         .delete(`/drawings/${drawing.id}/files/orphans`)
         .set("User-Agent", userAgent)
         .set(csrfHeaderName, csrfToken)
-        .set("Authorization", `Bearer ${ownerToken}`)
         .send({ confirmName: "Active Refs", fileIds: ["file-active"] });
 
       expect(res.status).toBe(400);
@@ -406,7 +367,6 @@ describe("Storage management routes", () => {
         .delete(`/drawings/${drawing.id}/files/orphans`)
         .set("User-Agent", userAgent)
         .set(csrfHeaderName, csrfToken)
-        .set("Authorization", `Bearer ${ownerToken}`)
         .send({ confirmName: drawing.name, fileIds: [] });
 
       expect(res.status).toBe(400);
@@ -422,7 +382,6 @@ describe("Storage management routes", () => {
         .delete(`/drawings/${drawing.id}/files/orphans`)
         .set("User-Agent", userAgent)
         .set(csrfHeaderName, csrfToken)
-        .set("Authorization", `Bearer ${ownerToken}`)
         .send({ confirmName: "Wrong", fileIds: ["file-x"] });
 
       expect(res.status).toBe(403);
@@ -446,8 +405,7 @@ describe("Storage management routes", () => {
 
       const res = await agent
         .get(`/drawings/${drawing.id}/files/diff`)
-        .set("User-Agent", userAgent)
-        .set("Authorization", `Bearer ${ownerToken}`);
+        .set("User-Agent", userAgent);
 
       expect(res.status).toBe(200);
       // totalCanvasRefs counts every canvas-referenced fileId (active +

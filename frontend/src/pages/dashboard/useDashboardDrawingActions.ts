@@ -1,12 +1,11 @@
 import React, { useCallback, useMemo, useState } from "react";
 import type { NavigateFunction } from "react-router-dom";
 import * as api from "../../api";
-import type { Collection, DrawingSummary } from "../../types";
+import type { DrawingSummary } from "../../types";
 
 type UseDashboardDrawingActionsParams = {
   drawings: DrawingSummary[];
   setDrawings: React.Dispatch<React.SetStateAction<DrawingSummary[]>>;
-  collections: Collection[];
   selectedCollectionId: string | null | undefined;
   selectedIds: Set<string>;
   setSelectedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
@@ -16,18 +15,9 @@ type UseDashboardDrawingActionsParams = {
   navigate: NavigateFunction;
 };
 
-const showTemporaryViewerError = (
-  message: string,
-  setViewerActionError: React.Dispatch<React.SetStateAction<string | null>>,
-) => {
-  setViewerActionError(message);
-  setTimeout(() => setViewerActionError(null), 3000);
-};
-
 export const useDashboardDrawingActions = ({
   drawings,
   setDrawings,
-  collections,
   selectedCollectionId,
   selectedIds,
   setSelectedIds,
@@ -42,30 +32,11 @@ export const useDashboardDrawingActions = ({
     isOpen: boolean;
     message: string;
   }>({ isOpen: false, message: "" });
-  const [viewerActionError, setViewerActionError] = useState<string | null>(
-    null,
-  );
   const [potentialDragId, setPotentialDragId] = useState<string | null>(null);
 
   const isTrashView = selectedCollectionId === "trash";
-  const currentCollection = collections.find(
-    (collection) => collection.id === selectedCollectionId,
-  );
-  const isSharedCollection = !!(
-    selectedCollectionId !== "trash" &&
-    currentCollection &&
-    currentCollection.isOwner === false
-  );
-
-  const handleViewerActionError = (message: string) =>
-    showTemporaryViewerError(message, setViewerActionError);
-
   const handleCreateDrawing = async () => {
     if (isTrashView) return;
-    if (isSharedCollection && currentCollection?.sharedRole !== "edit") {
-      handleViewerActionError("Viewers can't create new drawings");
-      return;
-    }
     try {
       const targetCollectionId =
         selectedCollectionId === undefined ? null : selectedCollectionId;
@@ -81,10 +52,6 @@ export const useDashboardDrawingActions = ({
 
   const handleImportDrawings = async (files: FileList | null) => {
     if (!files || isTrashView) return;
-    if (isSharedCollection && currentCollection?.sharedRole !== "edit") {
-      handleViewerActionError("Viewers can't import drawings");
-      return;
-    }
     const targetCollectionId =
       selectedCollectionId === undefined ? null : selectedCollectionId;
     uploadFiles(Array.from(files), targetCollectionId).finally(refreshData);
@@ -350,15 +317,11 @@ export const useDashboardDrawingActions = ({
     drawingToDelete,
     showBulkDeleteConfirm,
     showImportError,
-    viewerActionError,
     isTrashView,
-    currentCollection,
-    isSharedCollection,
     dragPreviewDrawings,
     setDrawingToDelete,
     setShowBulkDeleteConfirm,
     setShowImportError,
-    handleViewerActionError,
     handleCreateDrawing,
     handleImportDrawings,
     handleRenameDrawing,

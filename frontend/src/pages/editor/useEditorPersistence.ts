@@ -60,7 +60,6 @@ type UseEditorPersistenceParams = {
   drawingId?: string;
   canEdit: boolean;
   refs: PersistenceRefs;
-  user: unknown;
   drafts: Pick<
     ReturnType<typeof useEditorDrafts>,
     "revision" | "acknowledge" | "capture"
@@ -81,7 +80,6 @@ export const useEditorPersistence = ({
   drawingId: activeDrawingId,
   canEdit,
   refs,
-  user,
   drafts,
   normalizeImageElementStatus,
   resolveSafeSnapshot,
@@ -426,12 +424,10 @@ export const useEditorPersistence = ({
   };
 
   saveLibraryRef.current = async (items: any[]) => {
-    if (!user) return;
     try {
       await api.updateLibrary(items);
     } catch (err) {
       console.error("Failed to save library", err);
-      if (api.isAxiosError(err) && err.response?.status === 401) return;
       toast.error("Failed to save library");
     }
   };

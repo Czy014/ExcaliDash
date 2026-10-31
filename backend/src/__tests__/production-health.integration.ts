@@ -24,7 +24,7 @@ describe("production health checks", () => {
         headers: { "X-Forwarded-Proto": "https" },
         redirect: "manual",
       });
-      expect(secure.status).toBe(409);
+      expect(secure.status).toBe(200);
     } finally {
       await server.stop();
     }

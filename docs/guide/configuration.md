@@ -1,6 +1,6 @@
 ---
 title: Configure Your Self-hosted Excalidraw Workspace
-description: Configure ExcaliDash for your server, with environment settings for storage, authentication, and deployment.
+description: Configure ExcaliDash for your server, with environment settings for storage, single-user access, and deployment.
 ---
 
 # Configuration
@@ -30,8 +30,7 @@ BACKUP_DIR=./backups
 Compose reads substitutions from your shell or a root `.env` file:
 
 ```dotenv
-EXCALIDASH_TAG=latest
-AUTH_MODE=local
+AUTH_MODE=disabled
 FILE_UPLOAD_MAX_MB=100
 ```
 
@@ -47,24 +46,23 @@ services:
 Start the services:
 
 ```bash
-docker compose -f docker-compose.prod.yml -f compose.override.yml up -d
+docker compose -f docker-compose.yml -f compose.override.yml up -d
 ```
 
 ## Workspace preferences
 
-For appearance and editor preferences, open the workspace menu and select **Settings**. When authentication is enabled, login email and password controls are also in **Settings**, under **Account security**. The controls below change workspace preferences; server environment variables are configured in the files above.
+For appearance and editor preferences, open the workspace menu and select **Settings**. Preferences are stored in this browser; server environment variables are configured in the files above.
 
 <ThemeScreenshot light="/images/screenshots/settings-light.png" dark="/images/screenshots/settings.png" alt="Settings with appearance and editor preferences" />
 
-## Signing secrets
+## CSRF secret
 
-The Docker entrypoint generates and persists signing secrets if you leave them unset. To manage them yourself, generate two different values:
+The Docker entrypoint generates and persists a CSRF secret if you leave it unset. To manage it yourself, generate a value:
 
 ```bash
 openssl rand -hex 32
-openssl rand -hex 32
 ```
 
-Set `JWT_SECRET` and `CSRF_SECRET` in the root `.env`. Keep them stable across restarts and out of Git. Note that `JWT_SECRET` must contain at least 32 characters in production.
+Set `CSRF_SECRET` in the root `.env`. Keep it stable across restarts and out of Git. JWT and OpenID Connect settings are no longer used. `AUTH_MODE` must be `disabled` or unset.
 
 See the [environment reference](/reference/environment).

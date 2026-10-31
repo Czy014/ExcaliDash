@@ -1,7 +1,6 @@
 #!/bin/sh
 set -e
 
-JWT_SECRET_FILE="/app/prisma/.jwt_secret"
 CSRF_SECRET_FILE="/app/prisma/.csrf_secret"
 MIGRATION_LOCK_DIR="/app/prisma/.migration-lock"
 MIGRATION_LOCK_TIMEOUT_SECONDS="${MIGRATION_LOCK_TIMEOUT_SECONDS:-120}"
@@ -14,28 +13,6 @@ run_as_app_user() {
         "$@"
     fi
 }
-
-# Ensure JWT secret exists for production startup.
-# Backward compatibility: older installs may not have JWT_SECRET configured.
-if [ -z "${JWT_SECRET:-}" ]; then
-    echo "JWT_SECRET not provided, resolving persisted secret..."
-    if [ -f "${JWT_SECRET_FILE}" ]; then
-        JWT_SECRET="$(tr -d '\r\n' < "${JWT_SECRET_FILE}")"
-    fi
-
-    if [ -z "${JWT_SECRET}" ]; then
-        echo "No persisted JWT secret found. Generating a new secret..."
-        JWT_SECRET="$(openssl rand -hex 32)"
-        umask 077
-        printf "%s" "${JWT_SECRET}" > "${JWT_SECRET_FILE}"
-    fi
-else
-    # Persist explicitly provided secret to support future restarts without env injection.
-    umask 077
-    printf "%s" "${JWT_SECRET}" > "${JWT_SECRET_FILE}"
-fi
-
-export JWT_SECRET
 
 # Ensure CSRF secret exists for stable token validation across restarts.
 # (Still recommend setting explicitly for multi-instance deployments.)
@@ -57,9 +34,6 @@ else
 fi
 
 export CSRF_SECRET
-
-# The typed application configuration resolves OIDC secret files for both
-# Docker and direct Node startup without exporting their contents.
 
 # Set default DATABASE_PROVIDER if not set
 if [ -z "${DATABASE_PROVIDER:-}" ]; then
@@ -111,7 +85,6 @@ fi
 
 chmod 755 /app/uploads
 chmod -R 755 /app/dist/generated
-chmod 600 "${JWT_SECRET_FILE}"
 chmod 600 "${CSRF_SECRET_FILE}"
 
 # Ensure database file has proper permissions

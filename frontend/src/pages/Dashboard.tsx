@@ -11,7 +11,6 @@ import {
   DragPreview,
   DrawingsGrid,
   FileDropOverlay,
-  ViewerActionToast,
 } from "./dashboard/DashboardPanels";
 import { useDashboardData } from "./dashboard/useDashboardData";
 import { useDashboardCollectionActions } from "./dashboard/useDashboardCollectionActions";
@@ -46,15 +45,13 @@ export const Dashboard: React.FC = () => {
   const debouncedSearch = useDebounce(search, 300);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkMoveMenu, setShowBulkMoveMenu] = useState(false);
-  const [showSortMenu, setShowSortMenu] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const loaderRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const {
     sortConfig,
     sortOptions,
-    currentSortOption,
-    handleSortFieldChange: setSortField,
+    handleSortFieldChange,
     handleSortDirectionToggle,
   } = useDashboardSort();
   const { uploadFiles } = useUpload();
@@ -116,21 +113,15 @@ export const Dashboard: React.FC = () => {
       }
     }
   }, []);
-  const sortedDrawings = drawings;
   const selection = useDashboardSelection({
-    drawings: sortedDrawings,
+    drawings,
     selectedIds,
     setSelectedIds,
     searchInputRef,
   });
-  const handleSortFieldChange = (field: typeof sortConfig.field) => {
-    setSortField(field);
-    setShowSortMenu(false);
-  };
   const actions = useDashboardDrawingActions({
     drawings,
     setDrawings,
-    collections,
     selectedCollectionId,
     selectedIds,
     setSelectedIds,
@@ -189,25 +180,19 @@ export const Dashboard: React.FC = () => {
         {" "}
         {viewTitle}{" "}
       </h1>{" "}
-      <ViewerActionToast message={actions.viewerActionError} />{" "}
       <DashboardToolbar
         search={search}
         searchInputRef={searchInputRef}
         sortConfig={sortConfig}
         sortOptions={sortOptions}
-        currentSortOption={currentSortOption}
-        showSortMenu={showSortMenu}
-        sortedDrawingsCount={sortedDrawings.length}
+        sortedDrawingsCount={drawings.length}
         allSelected={selection.allSelected}
         hasSelection={selection.hasSelection}
         isTrashView={actions.isTrashView}
-        isSharedCollection={actions.isSharedCollection}
-        currentCollection={actions.currentCollection}
         showBulkMoveMenu={showBulkMoveMenu}
         selectedCount={selectedIds.size}
         collections={collections}
         onSearchChange={setSearch}
-        onShowSortMenuChange={setShowSortMenu}
         onSortFieldChange={handleSortFieldChange}
         onSortDirectionToggle={handleSortDirectionToggle}
         onSelectAll={selection.handleSelectAll}
@@ -217,7 +202,6 @@ export const Dashboard: React.FC = () => {
         onBulkMove={actions.handleBulkMove}
         onImportDrawings={actions.handleImportDrawings}
         onCreateDrawing={actions.handleCreateDrawing}
-        onViewerActionError={actions.handleViewerActionError}
       />{" "}
       <div
         className="min-h-full select-none relative"
@@ -242,15 +226,13 @@ export const Dashboard: React.FC = () => {
         {" "}
         {isDraggingFile && <FileDropOverlay viewTitle={viewTitle} />}{" "}
         <DrawingsGrid
-          drawings={sortedDrawings}
+          drawings={drawings}
           collections={collections}
           selectedIds={selectedIds}
           search={search}
           isLoading={isLoading}
           isDraggingFile={isDraggingFile}
           isTrashView={actions.isTrashView}
-          isSharedCollection={actions.isSharedCollection}
-          currentCollection={actions.currentCollection}
           onClearSearch={() => setSearch("")}
           onToggleSelection={selection.handleToggleSelection}
           onRename={actions.handleRenameDrawing}

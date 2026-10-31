@@ -31,8 +31,6 @@ const { services } = JSON.parse(
 const frontends = {
   "frontend-basic": "1101",
   "frontend-basic-seaweed": "1102",
-  "frontend-oidc": "1103",
-  "frontend-hybrid": "1104",
   "frontend-trusted-proxy": "1105",
 };
 

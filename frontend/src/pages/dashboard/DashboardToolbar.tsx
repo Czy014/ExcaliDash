@@ -29,19 +29,14 @@ type DashboardToolbarProps = {
   searchInputRef: React.RefObject<HTMLInputElement>;
   sortConfig: { field: DrawingSortField; direction: SortDirection };
   sortOptions: SortOption[];
-  currentSortOption?: SortOption;
-  showSortMenu?: boolean;
   sortedDrawingsCount: number;
   allSelected: boolean;
   hasSelection: boolean;
   isTrashView: boolean;
-  isSharedCollection: boolean;
-  currentCollection?: Collection;
   showBulkMoveMenu: boolean;
   selectedCount: number;
   collections: Collection[];
   onSearchChange: (value: string) => void;
-  onShowSortMenuChange?: (value: boolean) => void;
   onSortFieldChange: (field: DrawingSortField) => void;
   onSortDirectionToggle: () => void;
   onSelectAll: () => void;
@@ -51,7 +46,6 @@ type DashboardToolbarProps = {
   onBulkMove: (collectionId: string | null) => void;
   onImportDrawings: (files: FileList | null) => void;
   onCreateDrawing: () => void;
-  onViewerActionError: (message: string) => void;
 };
 
 export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
@@ -63,8 +57,6 @@ export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
   allSelected,
   hasSelection,
   isTrashView,
-  isSharedCollection,
-  currentCollection,
   showBulkMoveMenu,
   selectedCount,
   collections,
@@ -78,11 +70,7 @@ export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
   onBulkMove,
   onImportDrawings,
   onCreateDrawing,
-  onViewerActionError,
 }) => {
-  const canModifySelection =
-    !isSharedCollection || currentCollection?.sharedRole === "edit";
-
   return (
     <div className="mb-8 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
       <div className="flex flex-1 w-full lg:w-auto gap-3 items-center flex-wrap">
@@ -154,10 +142,10 @@ export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
           </button>
           <button
             onClick={onBulkDeleteClick}
-            disabled={!hasSelection || !canModifySelection}
+            disabled={!hasSelection}
             className={clsx(
               "ui-icon-button h-[42px] w-[42px]",
-              hasSelection && canModifySelection
+              hasSelection
                 ? "text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
                 : "",
             )}
@@ -167,10 +155,10 @@ export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
           </button>
           <button
             onClick={onBulkDuplicate}
-            disabled={!hasSelection || isTrashView || !canModifySelection}
+            disabled={!hasSelection || isTrashView}
             className={clsx(
               "ui-icon-button h-[42px] w-[42px]",
-              hasSelection && !isTrashView && canModifySelection
+              hasSelection && !isTrashView
                 ? "text-indigo-600 dark:text-indigo-400"
                 : "",
             )}
@@ -183,12 +171,10 @@ export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
               onClick={() =>
                 hasSelection && onShowBulkMoveMenuChange(!showBulkMoveMenu)
               }
-              disabled={!hasSelection || !canModifySelection}
+              disabled={!hasSelection}
               className={clsx(
                 "ui-icon-button h-[42px] w-[42px]",
-                hasSelection && canModifySelection
-                  ? "text-indigo-600 dark:text-indigo-400"
-                  : "",
+                hasSelection ? "text-indigo-600 dark:text-indigo-400" : "",
               )}
               title="Move Selected"
             >
@@ -247,13 +233,6 @@ export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
         />
         <button
           onClick={() => {
-            if (
-              isSharedCollection &&
-              currentCollection?.sharedRole !== "edit"
-            ) {
-              onViewerActionError("Viewers can't import drawings");
-              return;
-            }
             document.getElementById("dashboard-import")?.click();
           }}
           disabled={isTrashView}
@@ -264,20 +243,7 @@ export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
         >
           <Upload size={18} strokeWidth={2.5} /> Import drawings
         </button>
-        <NewDrawingControl
-          disabled={isTrashView}
-          onCreate={onCreateDrawing}
-          canCreate={() => {
-            if (
-              isSharedCollection &&
-              currentCollection?.sharedRole !== "edit"
-            ) {
-              onViewerActionError("Viewers can't create new drawings");
-              return false;
-            }
-            return true;
-          }}
-        />
+        <NewDrawingControl disabled={isTrashView} onCreate={onCreateDrawing} />
       </div>
     </div>
   );

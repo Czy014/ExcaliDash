@@ -60,14 +60,3 @@ export const calculateExpiresAt = (
   }
   return now.toISOString();
 };
-
-export const formatAutoDisableText = (expiresAt: string | null): string => {
-  if (!expiresAt) return "Link does not expire";
-  const ts = Date.parse(String(expiresAt));
-  if (!Number.isFinite(ts)) return "Link will expire";
-  const formatted = new Date(ts).toLocaleString(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-  return `Expires on ${formatted}`;
-};

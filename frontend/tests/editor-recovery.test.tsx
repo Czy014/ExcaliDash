@@ -90,7 +90,6 @@ const harness = () => {
     const nextPersistence = useEditorPersistence({
       drawingId,
       canEdit: true,
-      user: null,
       refs,
       drafts,
       normalizeImageElementStatus: (elements = []) => elements,

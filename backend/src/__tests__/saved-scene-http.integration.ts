@@ -39,8 +39,7 @@ describe("HTTP scene persistence", () => {
     app.use(express.json());
     registerDrawingCreateUpdateRoutes(app, {
       prisma,
-      requireAuth: auth,
-      optionalAuth: auth,
+      workspace: auth,
       asyncHandler: (handler) => (req, res, next) => {
         void handler(req, res, next).catch(next);
       },
@@ -52,7 +51,6 @@ describe("HTTP scene persistence", () => {
         version: z.number().optional(),
       }),
       getRequestPrincipal: async () => ({ kind: "user", userId: ownerId }),
-      respondWithAuthErrorIfPresent: () => false,
       invalidateDrawingsCache: vi.fn(),
       config: { nodeEnv: "test" },
       internDrawingFiles: async (files) => files,

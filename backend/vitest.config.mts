@@ -11,7 +11,7 @@ export default defineConfig({
       DATABASE_PROVIDER: "sqlite",
       DATABASE_URL: "file:./prisma/test.db",
       NODE_ENV: "test",
-      AUTH_MODE: "local",
+      AUTH_MODE: "disabled",
     },
     pool: "forks",
     forks: {

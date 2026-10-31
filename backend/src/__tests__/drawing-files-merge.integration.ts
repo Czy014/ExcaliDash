@@ -1,3 +1,4 @@
+import { WORKSPACE_USER_ID } from "../middleware/workspace";
 import { configureSecuritySettings, resetSecuritySettings } from "../security";
 import { encodeSnapshotField } from "../snapshots/snapshotCodec";
 /**
@@ -12,11 +13,7 @@ import { encodeSnapshotField } from "../snapshots/snapshotCodec";
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import request from "supertest";
-import bcrypt from "bcrypt";
-import jwt, { SignOptions } from "jsonwebtoken";
-import { StringValue } from "ms";
 import { PrismaClient } from "../generated/client";
-import { config } from "../config";
 import { getTestPrisma, setupTestDb, cleanupTestDb } from "./testUtils";
 
 describe("Drawing file save-merge (B2)", () => {
@@ -27,14 +24,6 @@ describe("Drawing file save-merge (B2)", () => {
   let csrfHeaderName: string;
   let csrfToken: string;
   let owner: { id: string; email: string };
-  let ownerToken: string;
-
-  const signToken = (userId: string, email: string) => {
-    const opts: SignOptions = {
-      expiresIn: config.jwtAccessExpiresIn as StringValue,
-    };
-    return jwt.sign({ userId, email, type: "access" }, config.jwtSecret, opts);
-  };
 
   const fileEntry = (id: string, dataURL = "data:image/png;base64,AAAA") => ({
     id,
@@ -64,7 +53,6 @@ describe("Drawing file save-merge (B2)", () => {
       .put(`/drawings/${id}`)
       .set("User-Agent", userAgent)
       .set(csrfHeaderName, csrfToken)
-      .set("Authorization", `Bearer ${ownerToken}`)
       .send(body);
 
   const readFiles = async (id: string) => {
@@ -76,12 +64,6 @@ describe("Drawing file save-merge (B2)", () => {
     setupTestDb();
     prisma = getTestPrisma();
     ({ app } = await import("../index"));
-
-    await prisma.systemConfig.upsert({
-      where: { id: "default" },
-      update: { authEnabled: true, registrationEnabled: false },
-      create: { id: "default", authEnabled: true, registrationEnabled: false },
-    });
 
     agent = request.agent(app);
     const csrfRes = await agent.get("/csrf-token").set("User-Agent", userAgent);
@@ -96,9 +78,11 @@ describe("Drawing file save-merge (B2)", () => {
   beforeEach(async () => {
     await cleanupTestDb(prisma);
     await prisma.user.deleteMany({});
-    const passwordHash = await bcrypt.hash("password123", 10);
+
+    const passwordHash = "unused";
     const ownerRow = await prisma.user.create({
       data: {
+        id: WORKSPACE_USER_ID,
         email: "owner@test.local",
         passwordHash,
         name: "Owner",
@@ -108,7 +92,6 @@ describe("Drawing file save-merge (B2)", () => {
       select: { id: true, email: true },
     });
     owner = ownerRow;
-    ownerToken = signToken(owner.id, owner.email);
   });
 
   it("unions incoming files with existing files instead of whole-replacing", async () => {
@@ -229,15 +212,14 @@ describe("Drawing file save-merge (B2)", () => {
       },
     });
     expect(snapshot.appState.startsWith("br1:")).toBe(true);
-    const read = await request(app)
-      .get(`/drawings/${drawing.id}/history/${snapshot.id}`)
-      .set("Authorization", `Bearer ${ownerToken}`);
+    const read = await request(app).get(
+      `/drawings/${drawing.id}/history/${snapshot.id}`,
+    );
     expect(read.status).toBe(200);
     expect(read.body.appState).toEqual(historicalState);
     const restore = await agent
       .post(`/drawings/${drawing.id}/history/${snapshot.id}/restore`)
       .set("User-Agent", userAgent)
-      .set("Authorization", `Bearer ${ownerToken}`)
       .set(csrfHeaderName, csrfToken)
       .send({ version: drawing.version });
     expect(restore.status).toBe(200);
@@ -262,7 +244,6 @@ describe("Drawing file save-merge (B2)", () => {
     const restore = await agent
       .post(`/drawings/${drawing.id}/history/${snapshot.id}/restore`)
       .set("User-Agent", userAgent)
-      .set("Authorization", `Bearer ${ownerToken}`)
       .set(csrfHeaderName, csrfToken)
       .send({ version: drawing.version });
     expect(restore.status).toBe(500);

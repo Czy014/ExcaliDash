@@ -5,11 +5,11 @@ export const registerLibraryRoutes = (
   app: express.Express,
   deps: DashboardRouteDeps,
 ) => {
-  const { prisma, requireAuth, asyncHandler, parseJsonField } = deps;
+  const { prisma, workspace, asyncHandler, parseJsonField } = deps;
 
   app.get(
     "/library",
-    requireAuth,
+    workspace,
     asyncHandler(async (req, res) => {
       if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 
@@ -25,7 +25,7 @@ export const registerLibraryRoutes = (
 
   app.put(
     "/library",
-    requireAuth,
+    workspace,
     asyncHandler(async (req, res) => {
       if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 

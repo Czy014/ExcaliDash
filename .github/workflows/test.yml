@@ -115,14 +115,10 @@ jobs:
         run: npm run docs:build
 
   e2e-tests:
-    name: E2E (${{ matrix.mode }})
+    name: E2E (single user)
     needs: changes
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        mode: [anonymous, authenticated]
 
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
@@ -159,14 +155,12 @@ jobs:
       - name: Run real browser and API journeys
         if: needs.changes.outputs.application == 'true'
         run: npm --prefix e2e test
-        env:
-          E2E_AUTH: ${{ matrix.mode == 'authenticated' && 'true' || 'false' }}
 
       - name: Upload browser diagnostics
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: always() && needs.changes.outputs.application == 'true'
         with:
-          name: playwright-${{ matrix.mode }}
+          name: playwright
           path: |
             e2e/playwright-report/
             e2e/test-results/

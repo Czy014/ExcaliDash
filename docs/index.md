@@ -33,8 +33,8 @@ canvasFeatures:
     title: Restore
     details: Browse drawing history and restore earlier versions.
   - icon: "05"
-    title: Sign in
-    details: Use local accounts, OpenID Connect, or both.
+    title: Open directly
+    details: Use one personal workspace without account setup or sign-in.
   - icon: "06"
     title: Portable data
     details: Import, export, and back up your ExcaliDash library.
@@ -56,7 +56,7 @@ Run the frontend and backend on your own machine, homelab, or server. The defaul
 
 ### Edit independently and control access
 
-Invite people to drawings or collections, choose viewing or editing permissions, and keep each page's unsaved changes safe. Use local accounts or OpenID Connect for sign-in. Read the [personal editing guide](/guide/personal-editing) and [authentication setup](/guide/authentication).
+Organize drawings into collections and keep each page's unsaved changes safe. All visitors use one workspace identity without sign-in. Read the [personal editing guide](/guide/personal-editing) and [single-user access guide](/guide/authentication).
 
 ### Save, restore, and back up
 
@@ -66,7 +66,7 @@ Drawings are stored on your server so you can return to them from another device
 
 ### What does ExcaliDash add to Excalidraw?
 
-ExcaliDash embeds the Excalidraw editor and adds a dashboard, persistent drawing storage, collections, sharing permissions, local drafts, version history, and account management.
+ExcaliDash embeds the Excalidraw editor and adds a dashboard, persistent drawing storage, collections, public links, local drafts and version history in a single-user workspace.
 
 ### Can I open a drawing in multiple tabs?
 

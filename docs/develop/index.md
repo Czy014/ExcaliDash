@@ -56,6 +56,6 @@ cd frontend
 npm run dev
 ```
 
-Open `http://localhost:6767`, then follow the first-run screens below. Select the arrows to move from authentication setup through creating an administrator and opening your first drawing.
+Open `http://localhost:6767` to enter the single-user library directly. No account setup is needed; select New Drawing to open the editor.
 
 <ScreenshotCarousel label="First-run setup after starting the local services" :slides="setupSlides" />

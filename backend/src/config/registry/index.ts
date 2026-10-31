@@ -1,7 +1,6 @@
 import type { EnvVarSpec } from "./types";
 import { serverEnv, databaseEnv } from "./server";
-import { authEnv } from "./auth";
-import { oidcEnv } from "./oidc";
+import { runtimeEnv } from "./runtime";
 import { securityEnv } from "./security";
 import { storageEnv, backupEnv } from "./storage";
 import { updateCheckEnv, linkSharingEnv } from "./misc";
@@ -12,8 +11,7 @@ export type { EnvVarSpec } from "./types";
 export const ENV_REGISTRY: readonly EnvVarSpec[] = [
   ...serverEnv,
   ...databaseEnv,
-  ...authEnv,
-  ...oidcEnv,
+  ...runtimeEnv,
   ...securityEnv,
   ...storageEnv,
   ...backupEnv,

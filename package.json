@@ -9,10 +9,9 @@
   "scripts": {
     "install:all": "npm --prefix backend ci && npm --prefix frontend ci && npm --prefix e2e ci",
     "build": "npm --prefix backend run build && npm --prefix frontend run build",
-    "test": "npm run test:integration && npm run test:e2e && npm run test:e2e:auth",
+    "test": "npm run test:integration && npm run test:e2e",
     "test:integration": "npm --prefix backend test",
     "test:e2e": "npm --prefix e2e test",
-    "test:e2e:auth": "npm --prefix e2e run test:auth",
     "lint": "eslint backend/src backend/scripts e2e scripts --max-warnings 0 && npm --prefix frontend run lint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

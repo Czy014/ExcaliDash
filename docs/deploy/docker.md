@@ -9,25 +9,25 @@ import { setupSlides } from "../.vitepress/theme/screenshot-flows";
 
 # How to self-host Excalidraw with Docker Compose
 
-Fork deployment is not released yet. The image tags below describe upstream distributions. Build and publish this fork before using these instructions for personal editing.
+Build this fork from source with `docker-compose.yml`. The upstream images in `docker-compose.prod.yml` do not contain this fork's changes.
 
 ExcaliDash gives the Excalidraw editor a self-hosted workspace with saved drawings, collections, local drafts and explicit save conflicts, and version history. This guide deploys the ExcaliDash frontend and backend with a persistent SQLite database. ExcaliDash is an independent project built around Excalidraw.
 
 ## Before you start
 
-Install Docker Engine or Docker Desktop and Docker Compose v2. You also need Git and an available host port `6767`. For access over the internet, prepare a domain and an HTTPS reverse proxy.
+Install Docker Engine or Docker Desktop and Docker Compose v2. You also need Git and an available host port `6767`. Restrict access to trusted visitors; every visitor can manage the workspace. Use HTTPS when traffic leaves the local machine.
 
 ## Install ExcaliDash
 
-Clone the repository and start the production stack:
+Clone the repository and build the stack:
 
 ```bash
-git clone https://github.com/ZimengXiong/ExcaliDash.git
+git clone https://github.com/Czy014/ExcaliDash.git
 cd ExcaliDash
-docker compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.yml up -d --build
 ```
 
-Open `http://localhost:6767`. On a remote server, use the server's address instead of `localhost`. Follow [first-run setup](/guide/first-run#create-the-administrator) to create the administrator account. Keep local authentication enabled, or [configure OpenID Connect](/guide/authentication).
+Open `http://localhost:6767` to enter the library directly. All visitors use one workspace identity without sign-in; see [single-user access](/guide/authentication).
 
 Use the arrows to follow the first-run screens after starting the stack.
 
@@ -36,28 +36,15 @@ Use the arrows to follow the first-run screens after starting the stack.
 Check that the services are running:
 
 ```bash
-docker compose -f docker-compose.prod.yml ps
-docker compose -f docker-compose.prod.yml logs --tail=100
+docker compose -f docker-compose.yml ps
+docker compose -f docker-compose.yml logs --tail=100
 ```
 
 Create a drawing, make an edit, then close and reopen it to check storage. To check multiple pages, edit the same loaded version in two tabs and verify the second save shows a conflict. See [personal editing](/guide/personal-editing).
 
-## Select an image version
+## Select a source revision
 
-Set the image tag in the root `.env`:
-
-```dotenv
-EXCALIDASH_TAG=latest
-```
-
-Pull and start both images:
-
-```bash
-docker compose -f docker-compose.prod.yml pull
-docker compose -f docker-compose.prod.yml up -d
-```
-
-Pin a release for repeatable deployments. Use the same version for both images.
+Build both images from the same reviewed fork commit. Record that commit with the deployed image tags so the matching LGPLv3 source remains available. Published upstream images do not provide this fork's single-user behavior.
 
 ## Configure HTTPS
 
@@ -78,7 +65,7 @@ Replace `https://draw.example.com` with your URL. The hop count must match your 
 Apply the override:
 
 ```bash
-docker compose -f docker-compose.prod.yml -f compose.override.yml up -d
+docker compose -f docker-compose.yml -f compose.override.yml up -d
 ```
 
 ## Non-root port binding
@@ -116,8 +103,8 @@ volumes:
 Initialize the backup volume for the backend's user (UID 1001), then apply the override:
 
 ```bash
-docker compose -f docker-compose.prod.yml -f compose.override.yml run --rm --no-deps --user 0 --entrypoint sh backend -c 'chown 1001:1001 /app/backups'
-docker compose -f docker-compose.prod.yml -f compose.override.yml up -d
+docker compose -f docker-compose.yml -f compose.override.yml run --rm --no-deps --user 0 --entrypoint sh backend -c 'chown 1001:1001 /app/backups'
+docker compose -f docker-compose.yml -f compose.override.yml up -d
 ```
 
 Check the backend logs for backup errors and test restoring a backup. For PostgreSQL, use your database's backup tools. If you use S3, back up its objects too.
@@ -125,15 +112,14 @@ Check the backend logs for backup errors and test restoring a backup. For Postgr
 ## Upgrade
 
 ```bash
-docker compose -f docker-compose.prod.yml pull
-docker compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.yml up -d --build
 ```
 
 ## Troubleshoot your deployment
 
 ### The site does not open
 
-Check `docker compose -f docker-compose.prod.yml ps` and the service logs. Ensure port `6767` is available and reachable from the machine you are using. `localhost` always means the machine where you open the URL.
+Check `docker compose -f docker-compose.yml ps` and the service logs. Ensure port `6767` is available and reachable from the machine you are using. `localhost` always means the machine where you open the URL.
 
 ### A drawing shows a save conflict
 
@@ -146,7 +132,7 @@ Use a Docker named volume for the default data directory. If you use a host bind
 ## Stop without deleting your data
 
 ```bash
-docker compose -f docker-compose.prod.yml down
+docker compose -f docker-compose.yml down
 ```
 
 The named data volume remains. Adding `--volumes` deletes it, including your stored drawings. Read the [storage and backup guide](/guide/storage-backups) before removing volumes or migrating servers.

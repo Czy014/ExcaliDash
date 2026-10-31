@@ -3,28 +3,21 @@ services:
     image: zimengxiong/excalidash-backend:${EXCALIDASH_TAG:-latest}
     container_name: excalidash-backend
     # Run an init process (PID 1) that reaps zombies and forwards SIGTERM/SIGINT
-    # to node so graceful shutdown (io.close / prisma.$disconnect) actually runs.
+    # to node so graceful shutdown (prisma.$disconnect) actually runs.
     init: true
     environment:
       - DATABASE_PROVIDER=sqlite
       - DATABASE_URL=file:/app/prisma/dev.db
       - PORT=8000
       - NODE_ENV=production
-      - AUTH_MODE=${AUTH_MODE:-local}
+      - AUTH_MODE=${AUTH_MODE:-disabled}
       - FILE_UPLOAD_MAX_MB=${FILE_UPLOAD_MAX_MB:-100}
       # Keep disabled by default; only enable when a trusted proxy sanitizes forwarded headers.
       - TRUST_PROXY=false
       # Optional for single-instance deployments:
       # if unset, backend auto-generates and persists one in the volume.
       # Recommended to set explicitly for portability and multi-instance setups.
-      - JWT_SECRET=${JWT_SECRET}
       - CSRF_SECRET=${CSRF_SECRET}
-      # Optional OIDC settings (required for AUTH_MODE=hybrid or oidc_enforced)
-      # - OIDC_PROVIDER_NAME=Authentik
-      # - OIDC_ISSUER_URL=https://auth.example.com/application/o/excalidash/
-      # - OIDC_CLIENT_ID=your-client-id
-      # - OIDC_CLIENT_SECRET=your-client-secret
-      # - OIDC_REDIRECT_URI=https://excalidash.example.com/api/auth/oidc/callback
       # Optional scheduled SQLite backups.
       # BACKUP_SCHEDULE is a 5- or 6-field cron expression; unset disables it.
       # Uncomment these together with the backup-data volume mount below.
