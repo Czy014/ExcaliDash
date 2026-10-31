@@ -1,7 +1,6 @@
 import { WORKSPACE_USER_ID } from "../../middleware/workspace";
 import express from "express";
 import { Prisma } from "../../generated/client";
-import { canViewDrawing, getDrawingAccess } from "../../authz/sharing";
 import { getUserTrashCollectionId, toPublicTrashCollectionId } from "./trash";
 import { SortDirection, SortField } from "./types";
 import type { DrawingRouteContext } from "./drawingRouteContext";
@@ -211,19 +210,8 @@ export const registerDrawingListRoutes = (
     asyncHandler(async (req, res) => {
       const { id } = req.params;
 
-      const access = await getDrawingAccess({
-        prisma,
-        drawingId: id,
-      });
-      if (!canViewDrawing(access)) {
-        return res.status(404).json({
-          error: "Drawing not found",
-          message: "Drawing does not exist",
-        });
-      }
-
-      const drawing = await prisma.drawing.findUnique({
-        where: { id },
+      const drawing = await prisma.drawing.findFirst({
+        where: { id, userId: WORKSPACE_USER_ID },
         select: { preview: true, updatedAt: true },
       });
       if (!drawing) {

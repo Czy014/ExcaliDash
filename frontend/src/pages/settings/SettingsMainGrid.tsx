@@ -3,7 +3,6 @@ import {
   PanelLeft,
   Eye,
   EyeOff,
-  Languages,
   Moon,
   Sun,
   Zap,
@@ -17,7 +16,6 @@ import {
   SettingsRow,
   settingsPrimaryButtonClass,
 } from "./SettingsRow";
-import { useLocale } from "../../context/useLocale";
 import {
   MIN_IMAGE_COMPRESSION_THRESHOLD_MB,
   MAX_IMAGE_COMPRESSION_THRESHOLD_MB,
@@ -63,29 +61,8 @@ export const SettingsMainGrid = ({
   onUpdateChannelChange,
   onCheckForUpdates,
 }: SettingsMainGridProps) => {
-  const { language, setLanguage, t } = useLocale();
-
   return (
     <SettingsCard>
-      <SettingsRow
-        icon={<Languages size={20} />}
-        tileClassName="border-black bg-emerald-400 text-black dark:border-neutral-700 dark:bg-emerald-400 dark:text-black"
-        title={t("settings.language")}
-      >
-        <select
-          aria-label={t("settings.language")}
-          value={language}
-          onChange={(event) => setLanguage(event.target.value)}
-          className="ui-input text-sm font-bold"
-        >
-          <option value="en">English</option>
-          <option value="zh-CN">简体中文</option>
-          {language !== "en" && language !== "zh-CN" && (
-            <option value={language}>{language} (editor language)</option>
-          )}
-        </select>
-      </SettingsRow>
-
       <SettingsRow
         icon={theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
         tileClassName="border-black bg-amber-400 text-black dark:border-neutral-700 dark:bg-amber-400 dark:text-black"

@@ -2,44 +2,44 @@
 
 ## Purpose
 
-记录现有 HTTP 场景保存的版本和数据完整性契约，防止个人编辑模式的改动造成较新内容被覆盖或图片、历史记录丢失。
+Record the version and data integrity contracts for HTTP scene saves, protecting newer content, images and history during personal editing changes.
 
 ## Requirements
 
 ### Requirement: Scene saves SHALL guard supplied versions
 
-编辑器的所有场景更新 SHALL 携带所基于的已加载版本，包括自动保存、手动保存、排队保存及离开页面时的保存；未知版本时不得提交场景。HTTP 场景更新携带 `version` 时，服务端 SHALL 在提交时检查该版本；版本检查和写入 SHALL 通过同一个事务中的条件更新完成。版本不匹配时 SHALL 返回 HTTP 409 和 `VERSION_CONFLICT`，不得覆盖当前场景。成功的场景写入 SHALL 增加版本并返回新版本。编辑器 MUST NOT 通过省略版本、替换为新版本或其他保存入口绕过冲突暂停状态。
+All editor scene updates SHALL include the loaded base version, including autosave, manual, queued, navigation and unload saves; unknown versions MUST NOT be sent. The server SHALL check supplied `version` with a conditional update in the write transaction. Stale writes SHALL return HTTP 409 and `VERSION_CONFLICT` without changing the scene. Success SHALL increment and return the version. The editor MUST NOT bypass a conflict pause by omitting or replacing the version or using another save path.
 
 #### Scenario: Reject a stale version
 
-- **WHEN** 当前场景已是版本 11，客户端使用版本 10 提交场景
-- **THEN** 服务端返回 HTTP 409 和 `VERSION_CONFLICT`，已保存的版本 11 内容保持不变
+- **WHEN** the current scene is version 11 and a client submits version 10
+- **THEN** the server returns HTTP 409 and `VERSION_CONFLICT`, leaving version 11 unchanged
 
 #### Scenario: Serialize simultaneous versioned saves
 
-- **WHEN** 两个请求都基于同一个版本同时提交不同场景
-- **THEN** 至多一个请求以该版本成功，另一个得到版本冲突，失败请求不覆盖成功请求的场景
+- **WHEN** two requests submit different scenes based on the same version
+- **THEN** at most one succeeds with that version and the other receives a conflict without overwriting the successful scene
 
 #### Scenario: Block every scene save path after a conflict
 
-- **WHEN** 页面已收到版本冲突，此时仍有防抖保存、队列请求、手动保存、组件卸载或页面关闭事件
-- **THEN** 尚未发出的原图场景写入全部停止，页面不能通过其他入口继续保存原图，草稿继续记录本地修改
+- **WHEN** a page has received a version conflict and a debounced save, queued request, manual save, unmount or page-close event occurs
+- **THEN** unsent writes to the original scene stop across all save paths while drafts continue to record local edits
 
 #### Scenario: Preserve edits when the version is unavailable
 
-- **WHEN** 编辑器尚未成功读取绘图版本，或读取被网络错误中断
-- **THEN** 不发送无版本的场景更新；已发生的本地修改按草稿保护，不错误显示为已保存
+- **WHEN** the editor has not successfully loaded the drawing version or a network error interrupts loading
+- **THEN** it does not send an unversioned scene update, protects local edits as drafts and does not claim they are saved
 
 ### Requirement: Scene saves SHALL preserve files and history
 
-成功的场景更新 SHALL 在同一事务中记录更新前场景的历史快照。普通场景保存 SHALL 保留已有图片引用，缺少某个文件或提交空白文件内容不得静默抹掉仍有内容的已有文件。
+Successful scene updates SHALL record the previous scene as a history snapshot in the same transaction. Normal saves SHALL retain existing image references; omitting a file or submitting empty file content MUST NOT silently erase existing content.
 
 #### Scenario: Preserve an image omitted from a partial save
 
-- **WHEN** 一个普通场景更新未提交已有图片的文件内容
-- **THEN** 已有文件内容仍然可读取，不因缺少该字段而被删除
+- **WHEN** a normal scene update omits the content of an existing image
+- **THEN** that file's content remains readable and is not deleted because the field was absent
 
 #### Scenario: Record the previous scene
 
-- **WHEN** 一个带正确版本的场景更新成功提交
-- **THEN** 历史中能取得写入前的场景，当前绘图返回写入后的内容和新版本
+- **WHEN** a scene update with the correct version commits
+- **THEN** the previous scene is available in history and the drawing returns the new scene and version

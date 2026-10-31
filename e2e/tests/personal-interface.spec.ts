@@ -8,15 +8,15 @@ const expectPersonalNavigation = async (page: Page) => {
     0,
   );
   await expect(
-    page
-      .locator("aside")
-      .getByText(/^(Profile|个人资料|Shared with me|与我共享)$/),
+    page.locator("aside").getByText(/^(Profile|Shared with me)$/),
   ).toHaveCount(0);
 };
 
+test.use({ locale: "zh-CN" });
+
 for (const language of ["en", "zh-CN"]) {
   for (const width of [1280, 390]) {
-    test(`personal navigation keeps tools and collections at ${width}px in ${language}`, async ({
+    test(`English navigation keeps tools at ${width}px with stored ${language}`, async ({
       page,
       request,
     }) => {
@@ -46,11 +46,12 @@ for (const language of ["en", "zh-CN"]) {
       };
       const collection = await createCollection(
         request,
-        `Personal UI ${language} ${width}`,
+        `Personal UI ${language} ${width} \u7ed8\u56fe`,
       );
       try {
         await page.goto("/");
         await expect(page.getByPlaceholder("Search drawings...")).toBeVisible();
+        await expect(page.locator("html")).toHaveAttribute("lang", "en");
         await openSidebar();
         await expectPersonalNavigation(page);
         const sidebar = page.locator("aside");
@@ -63,13 +64,13 @@ for (const language of ["en", "zh-CN"]) {
         await openSidebar();
         await sidebar
           .getByRole("button", {
-            name: language === "en" ? "Workspace menu" : "工作区菜单",
+            name: "Workspace menu",
             exact: true,
           })
           .click();
         await sidebar
           .getByRole("button", {
-            name: language === "en" ? "Settings" : "设置",
+            name: "Settings",
             exact: true,
           })
           .click();
@@ -91,6 +92,13 @@ for (const language of ["en", "zh-CN"]) {
         await expect(
           page.getByLabel("Current Password", { exact: true }),
         ).toHaveCount(0);
+        await expect(
+          page.getByRole("combobox", { name: "Language", exact: true }),
+        ).toHaveCount(0);
+        await page.reload();
+        await expect(
+          page.getByRole("heading", { name: "Settings", exact: true }),
+        ).toBeVisible();
         const compact = page.getByRole("switch", {
           name: "Toggle compact sidebar",
         });
@@ -101,7 +109,7 @@ for (const language of ["en", "zh-CN"]) {
         await expectPersonalNavigation(page);
         await sidebar
           .getByRole("button", {
-            name: language === "en" ? "Trash" : "回收站",
+            name: "Trash",
             exact: true,
           })
           .click();

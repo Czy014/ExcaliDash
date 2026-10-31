@@ -5,14 +5,12 @@ type UseEditorChromeOptions = {
   drawingName: string;
   autoHideEnabled: boolean;
   isRenaming: boolean;
-  isShareOpen: boolean;
 };
 
 export const useEditorChrome = ({
   drawingName,
   autoHideEnabled,
   isRenaming,
-  isShareOpen,
 }: UseEditorChromeOptions) => {
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
 
@@ -24,7 +22,7 @@ export const useEditorChrome = ({
   }, [drawingName]);
 
   useEffect(() => {
-    if (!autoHideEnabled || isRenaming || isShareOpen) {
+    if (!autoHideEnabled || isRenaming) {
       setIsHeaderVisible(true);
       return;
     }
@@ -62,7 +60,7 @@ export const useEditorChrome = ({
       handleMouseMove.cancel();
       if (hideTimeout !== null) clearTimeout(hideTimeout);
     };
-  }, [autoHideEnabled, isRenaming, isShareOpen]);
+  }, [autoHideEnabled, isRenaming]);
 
   return {
     isHeaderVisible,

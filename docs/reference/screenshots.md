@@ -1,6 +1,6 @@
 ---
-title: "ExcaliDash Screenshots: Dashboard, Editor, and Sharing"
-description: See ExcaliDash screenshots of the Excalidraw dashboard, collections, editor, sharing, and tablet and mobile layouts.
+title: "ExcaliDash Screenshots: Dashboard and Editor"
+description: See ExcaliDash screenshots of the Excalidraw dashboard, collections, editor, and tablet and mobile layouts.
 ---
 
 <script setup>
@@ -9,7 +9,7 @@ import { setupSlides } from "../.vitepress/theme/screenshot-flows";
 
 # Screenshots
 
-Explore the ExcaliDash workspace, editor, and sharing. Select any screenshot to open the full-size image.
+Explore the ExcaliDash workspace and editor. Select any screenshot to open the full-size image.
 
 Try toggling dark mode on this page!!
 
@@ -66,12 +66,6 @@ Access the drawing dashboard on a narrow mobile screen.
 Follow the real setup flow, including the initially empty workspace and first blank drawing.
 
 <ScreenshotCarousel label="Complete fresh-instance setup" :slides="setupSlides" />
-
-## Link access
-
-Open the link-access choices in the drawing sharing controls.
-
-<ThemeScreenshot light="/images/screenshots/share-link-light.png" dark="/images/screenshots/share-link.png" alt="Link access — Open the link-access choices in the drawing sharing controls." />
 
 ## Drawing history
 

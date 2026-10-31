@@ -146,7 +146,7 @@ describe("single-user workspace", () => {
     ).toBe(1);
   });
 
-  it("does not revive removed authentication or user-sharing routes", async () => {
+  it("does not revive removed authentication or sharing routes", async () => {
     for (const url of [
       "/auth/status",
       "/auth/me",
@@ -162,6 +162,16 @@ describe("single-user workspace", () => {
       .send({})
       .expect(404);
     const created = await createDrawing();
+    await agent.get(`/drawings/${created.body.id}/sharing`).expect(404);
+    await agent
+      .post(`/drawings/${created.body.id}/link-shares`)
+      .set(csrf.header, csrf.token)
+      .send({ permission: "edit" })
+      .expect(404);
+    await agent
+      .delete(`/drawings/${created.body.id}/link-shares/old`)
+      .set(csrf.header, csrf.token)
+      .expect(404);
     await agent
       .get(`/drawings/${created.body.id}/share-resolve?q=old`)
       .expect(404);
@@ -242,56 +252,92 @@ describe("single-user workspace", () => {
     ).toBe(1);
   });
 
-  it("retains link-only view, edit, expiry and revocation for historical drawings", async () => {
-    await request(app).get("/drawings").expect(200);
-    const historical = await prisma.user.create({
-      data: {
-        email: "link-owner@test.local",
-        name: "Historical",
-        passwordHash: "retained",
-      },
-    });
-    const drawing = await prisma.drawing.create({
-      data: {
-        userId: historical.id,
-        name: "Link drawing",
-        elements: "[]",
-        appState: "{}",
-      },
-    });
-    const share = await prisma.drawingLinkShare.create({
-      data: {
-        drawingId: drawing.id,
-        tokenHash: "legacy-hash",
-        permission: "view",
-        createdByUserId: historical.id,
-      },
-    });
-    const viewed = await agent.get(`/drawings/${drawing.id}`).expect(200);
-    expect(viewed.body.accessLevel).toBe("view");
-    await agent
-      .put(`/drawings/${drawing.id}`)
-      .set(csrf.header, csrf.token)
-      .send({ name: "Blocked" })
-      .expect(404);
-    await prisma.drawingLinkShare.update({
-      where: { id: share.id },
-      data: { permission: "edit" },
-    });
-    await agent
-      .put(`/drawings/${drawing.id}`)
-      .set(csrf.header, csrf.token)
-      .send({ name: "Edited through link" })
-      .expect(200);
-    await prisma.drawingLinkShare.update({
-      where: { id: share.id },
-      data: { expiresAt: new Date(0) },
-    });
-    await agent.get(`/drawings/${drawing.id}`).expect(404);
-    await prisma.drawingLinkShare.update({
-      where: { id: share.id },
-      data: { expiresAt: null, revokedAt: new Date() },
-    });
-    await agent.get(`/drawings/${drawing.id}`).expect(404);
-  });
+  it.each(["view", "edit"])(
+    "ignores historical %s links without deleting their data",
+    async (permission) => {
+      await request(app).get("/drawings").expect(200);
+      const historical = await prisma.user.create({
+        data: {
+          email: `link-${permission}-owner@test.local`,
+          name: "Historical",
+          passwordHash: "retained",
+        },
+      });
+      const drawing = await prisma.drawing.create({
+        data: {
+          userId: historical.id,
+          name: "Link drawing",
+          elements: "[]",
+          appState: "{}",
+        },
+      });
+      const share = await prisma.drawingLinkShare.create({
+        data: {
+          drawingId: drawing.id,
+          tokenHash: "legacy-hash",
+          permission,
+          createdByUserId: historical.id,
+        },
+      });
+      const snapshot = await prisma.drawingSnapshot.create({
+        data: {
+          drawingId: drawing.id,
+          version: drawing.version,
+          elements: "[]",
+          appState: "{}",
+          files: "{}",
+        },
+      });
+      const bytes = Buffer.from([1, 2, 3]);
+      await prisma.drawingFile.create({
+        data: {
+          drawingId: drawing.id,
+          fileId: "historical-image",
+          mimeType: "image/png",
+          sizeBytes: bytes.length,
+          storage: "db",
+          data: bytes,
+        },
+      });
+      for (const path of [
+        `/drawings/${drawing.id}`,
+        `/drawings/${drawing.id}/preview`,
+        `/drawings/${drawing.id}/history`,
+        `/drawings/${drawing.id}/history/${snapshot.id}`,
+        `/files/${drawing.id}/historical-image`,
+      ]) {
+        await agent.get(path).expect(404);
+      }
+      await agent
+        .put(`/drawings/${drawing.id}`)
+        .set(csrf.header, csrf.token)
+        .send({ name: "Blocked" })
+        .expect(404);
+      await agent
+        .post(`/drawings/${drawing.id}/history/${snapshot.id}/restore`)
+        .set(csrf.header, csrf.token)
+        .send({})
+        .expect(404);
+      await agent
+        .put(`/drawings/${drawing.id}/files/new-image`)
+        .set(csrf.header, csrf.token)
+        .set("Content-Type", "image/png")
+        .send(bytes)
+        .expect(404);
+      expect(
+        await prisma.drawingLinkShare.findUnique({ where: { id: share.id } }),
+      ).toEqual(share);
+      expect(
+        await prisma.drawing.findUnique({ where: { id: drawing.id } }),
+      ).toEqual(drawing);
+      expect(
+        await prisma.drawingSnapshot.count({
+          where: { drawingId: drawing.id },
+        }),
+      ).toBe(1);
+      expect(
+        await prisma.drawingFile.count({ where: { drawingId: drawing.id } }),
+      ).toBe(1);
+    },
+  );
 });

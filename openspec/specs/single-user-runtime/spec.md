@@ -2,47 +2,57 @@
 
 ## Purpose
 
-记录无需认证的单用户工作区运行契约，明确固定数据身份、历史数据保留、CSRF、公开链接和浏览器本地偏好。
+Record the credential-free single-user workspace contract, including its fixed data identity, historical data retention, request protection and browser-local preferences.
 
 ## Requirements
 
 ### Requirement: Single-user runtime SHALL serve the library without credentials
 
-运行时 SHALL 使用固定工作区身份 `bootstrap-admin` 处理绘图、集合、文件、历史、导入导出和设置请求；请求不需要登录 cookie、Bearer token 或 API key。工作区 ID SHALL 直接来自固定常量，不建立请求用户或多用户 principal 适配层。旧用户和认证字段 MUST 保留在数据库中，不通过启动或请求自动删除。
+The runtime SHALL use the fixed workspace identity `bootstrap-admin` for drawing, collection, file, history, import/export and settings requests without requiring login cookies, Bearer tokens or API keys. The workspace ID SHALL come directly from a constant without a request-user or multi-user principal adapter. Existing users and authentication fields MUST remain in the database and MUST NOT be automatically deleted at startup or during requests.
 
 #### Scenario: Open the library on a fresh browser
 
-- **WHEN** 浏览器没有认证 cookie 和本地登录状态并访问绘图库
-- **THEN** 页面直接显示绘图库，请求能够读取和保存当前单用户的数据
+- **WHEN** a browser without authentication cookies or local login state opens the library
+- **THEN** it opens directly and requests can read and save the single user's data
 
 #### Scenario: Ignore supplied identities
 
-- **WHEN** 请求携带过期凭据或声称其他用户身份的请求头
-- **THEN** 仍使用同一个固定工作区，不能借此读取或修改未通过公开链接开放的历史用户绘图
+- **WHEN** a request supplies expired credentials or headers claiming another user's identity
+- **THEN** it still uses the fixed workspace and cannot read or modify historical users' drawings
 
 ### Requirement: Authentication endpoints and UI SHALL be absent
 
-后端 MUST NOT 挂载 `/auth/*`、OIDC、密码重置、API key、管理员用户和 impersonation 路由；前端 MUST NOT 提供登录、注册、认证初始化、账户安全、API key 或管理员入口。
+The backend MUST NOT mount `/auth/*`, OIDC, password-reset, API-key, user-administration or impersonation routes. The frontend MUST NOT provide login, registration, authentication setup, account security, API-key or administrator entries.
 
 #### Scenario: Probe a removed authentication route
 
-- **WHEN** 客户端请求 `/api/auth/status`，或携带有效 CSRF cookie/token 请求 `/api/auth/login`
-- **THEN** 服务端返回普通的未找到响应，前端没有认证页面或重定向循环
+- **WHEN** a client requests `/api/auth/status` or submits `/api/auth/login` with a valid CSRF cookie and token
+- **THEN** the backend returns its normal not-found response and the frontend has no authentication page or redirect loop
 
 ### Requirement: Existing personal drawing protections SHALL remain
 
-绘图库 SHALL 保留版本冲突、历史快照、文件存储、CSRF 和公开链接分享策略。访问策略保持原 `disabled` 模式：所有访问者使用同一个本地身份，拥有该身份的绘图；公开链接不提供与该身份隔离的访客权限。其他历史用户的数据不自动合并或开放。
+The library SHALL retain version conflicts, history snapshots, file storage and CSRF protection. Runtime drawing access SHALL be limited to the fixed workspace owner's drawings. Other historical users' data and sharing records SHALL NOT be automatically merged or exposed. Existing user, permission and link-share database tables SHALL remain.
 
 #### Scenario: Save through the existing API
 
-- **WHEN** 单用户页面使用当前版本提交场景修改
-- **THEN** 场景、图片、历史和版本检查与认证移除前一致，过期版本仍返回冲突
+- **WHEN** a single-user page submits scene changes with its current version
+- **THEN** scenes, images, history and version checks behave as before sharing removal, with stale versions still returning conflicts
+
+#### Scenario: Preserve historical sharing data without runtime access
+
+- **WHEN** the database contains other historical users' drawings, permissions or `DrawingLinkShare` rows
+- **THEN** startup and requests leave those rows intact but drawing, history and file endpoints return not-found responses
+
+#### Scenario: Retired sharing endpoints are absent
+
+- **WHEN** a client requests sharing settings, creates a link or revokes a link using the retired endpoints with valid CSRF credentials
+- **THEN** the backend returns its normal not-found response without changing sharing records
 
 ### Requirement: Preferences SHALL remain local to the browser
 
-前端 SHALL 通过已有 localStorage 保存主题、语言、排序和编辑器偏好，不调用账户偏好接口，也不因认证移除清空已有偏好。
+The frontend SHALL store theme, sort and editor preferences in the existing localStorage without calling account preference endpoints or clearing supported preferences because sharing or localization was removed. Obsolete language fields SHALL be ignored.
 
 #### Scenario: Reload after changing a preference
 
-- **WHEN** 用户修改主题或编辑器偏好后刷新页面
-- **THEN** 新偏好仍然生效，网络请求中没有账户偏好接口调用
+- **WHEN** a user changes the theme or an editor preference and reloads the page
+- **THEN** the preference remains effective and no account preference endpoint is requested

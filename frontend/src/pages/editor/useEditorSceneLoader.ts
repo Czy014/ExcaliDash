@@ -1,21 +1,14 @@
 import { useCallback, useEffect, useRef } from "react";
-import type { NavigateFunction } from "react-router-dom";
 import type { MutableRefObject } from "react";
 import { toast } from "sonner";
 import * as api from "../../api";
 import { rehydrateFilesProgressive } from "../../utils/rehydrateFiles";
 import { getPersistedAppState, hasRenderableElements } from "./shared";
 
-type AccessLevel = "none" | "view" | "edit" | "owner";
+type AccessLevel = "none" | "owner";
 
 type SceneLoaderParams = {
   id: string | undefined;
-  location: {
-    pathname: string;
-    search: string;
-    hash: string;
-  };
-  navigate: NavigateFunction;
   refs: {
     elementVersionMap: MutableRefObject<Map<string, any>>;
     saveQueue: MutableRefObject<Promise<void>>;
@@ -64,8 +57,6 @@ export type SceneLoaderRefs = SceneLoaderParams["refs"];
 
 export const useEditorSceneLoader = ({
   id,
-  location,
-  navigate,
   refs,
   setAccessLevel,
   setDrawingName,
@@ -130,13 +121,7 @@ export const useEditorSceneLoader = ({
         ]);
         if (cancelled) return;
         setDrawingName(data.name);
-        setAccessLevel(
-          data.accessLevel === "view" ||
-            data.accessLevel === "edit" ||
-            data.accessLevel === "owner"
-            ? data.accessLevel
-            : "owner",
-        );
+        setAccessLevel("owner");
         const rawElements = data.elements || [];
         // Paint first, stream images in. In S3 (or db-ref) mode the loaded
         // files carry `/api/files/...` (or public S3) references rather than
@@ -273,16 +258,6 @@ export const useEditorSceneLoader = ({
           } else if (err.response?.status === 404) {
             message = "Drawing not found";
           }
-          if (
-            err.response?.status === 403 &&
-            id &&
-            location.pathname.startsWith("/editor/")
-          ) {
-            navigate(`/shared/${id}${location.search}${location.hash}`, {
-              replace: true,
-            });
-            return;
-          }
         }
         toast.error(message);
         refs.latestElements.current = [];
@@ -308,10 +283,6 @@ export const useEditorSceneLoader = ({
     };
   }, [
     id,
-    location.hash,
-    location.pathname,
-    location.search,
-    navigate,
     normalizeImageElementStatus,
     recordElementVersion,
     computeElementOrderSig,

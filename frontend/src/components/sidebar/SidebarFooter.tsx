@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import clsx from "clsx";
-import { useLocale } from "../../context/useLocale";
 import { usePreference } from "../../context/PreferencesContext";
 
 interface SidebarFooterProps {
@@ -28,7 +27,6 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = ({
   onDrop,
 }) => {
   const navigate = useNavigate();
-  const { t } = useLocale();
   const [isTrashDragOver, setIsTrashDragOver] = useState(false);
   const [compact] = usePreference("compactSidebar", true);
   const [isOpen, setIsOpen] = useState(false);
@@ -63,7 +61,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = ({
       {compact && (
         <button
           type="button"
-          aria-label={t("sidebar.workspaceMenu")}
+          aria-label="Workspace menu"
           aria-expanded={isOpen}
           aria-controls={actionsId}
           onClick={() => setIsOpen((open) => !open)}
@@ -71,9 +69,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = ({
           className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 dark:text-neutral-200 dark:hover:bg-neutral-800"
         >
           <SlidersHorizontal size={18} />
-          <span className="min-w-0 flex-1 truncate text-left">
-            {t("sidebar.workspace")}
-          </span>
+          <span className="min-w-0 flex-1 truncate text-left">Workspace</span>
           <ChevronUp
             size={16}
             className={clsx(
@@ -114,7 +110,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = ({
           )}
         >
           <Trash2 size={18} />
-          <span className="min-w-0 flex-1 text-left">{t("sidebar.trash")}</span>
+          <span className="min-w-0 flex-1 text-left">Trash</span>
         </button>
 
         <button
@@ -125,9 +121,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = ({
           )}
         >
           <SettingsIcon size={18} />
-          <span className="min-w-0 flex-1 text-left">
-            {t("sidebar.settings")}
-          </span>
+          <span className="min-w-0 flex-1 text-left">Settings</span>
         </button>
       </div>
     </div>

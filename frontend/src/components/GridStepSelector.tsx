@@ -1,5 +1,4 @@
 import React from "react";
-import { useI18n } from "@excalidraw/excalidraw";
 
 /** Excalidraw's built-in default number of cells between bold grid lines. */
 export const DEFAULT_GRID_STEP = 5;
@@ -16,20 +15,11 @@ interface GridStepSelectorProps {
   onChange: (gridStep: number) => void;
 }
 
-/**
- * Grid-step control rendered inside <Excalidraw> children so `useI18n` can read
- * the Excalidraw i18n context. The embedded editor exposes `gridStep` in
- * appState but ships no UI for it, so we surface our own. Persistence
- * (localStorage mirror + server sync) is owned by the preferences context via
- * the `onChange` handler.
- */
+// Excalidraw stores gridStep in appState but provides no control for it.
 export const GridStepSelector: React.FC<GridStepSelectorProps> = ({
   gridStep,
   onChange,
 }) => {
-  const { t } = useI18n();
-  const label = t("labels.gridStep", null, "Grid step");
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const parsed = Number.parseInt(e.target.value, 10);
     if (Number.isNaN(parsed)) return;
@@ -46,7 +36,7 @@ export const GridStepSelector: React.FC<GridStepSelectorProps> = ({
         width: "100%",
       }}
     >
-      <span style={{ fontSize: 13, flexShrink: 0 }}>{label}</span>
+      <span style={{ fontSize: 13, flexShrink: 0 }}>Grid step</span>
       <input
         type="number"
         min={MIN_GRID_STEP}
@@ -64,7 +54,7 @@ export const GridStepSelector: React.FC<GridStepSelectorProps> = ({
           background: "var(--color-surface-low)",
           color: "var(--color-on-surface)",
         }}
-        aria-label={label}
+        aria-label="Grid step"
       />
     </div>
   );

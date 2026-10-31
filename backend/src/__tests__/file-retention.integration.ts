@@ -149,32 +149,9 @@ describe("File reference lifetime", () => {
       asyncHandler,
     });
 
-  it("stores link edits in the historical owner's S3 namespace without granting storage management", async () => {
+  it("stores workspace images in the owner's S3 namespace and keeps retries idempotent", async () => {
     vi.mocked(isS3Enabled).mockReturnValue(true);
-    const peer = await prisma.user.create({
-      data: {
-        email: "peer-retention@test.local",
-        passwordHash: "unused",
-        name: "Peer",
-      },
-    });
-    const drawing = await prisma.drawing.create({
-      data: {
-        userId: peer.id,
-        name: "Historical drawing",
-        elements: "[]",
-        appState: "{}",
-        files: "{}",
-      },
-    });
-    await prisma.drawingLinkShare.create({
-      data: {
-        drawingId: drawing.id,
-        createdByUserId: peer.id,
-        tokenHash: "test-link-hash",
-        permission: "edit",
-      },
-    });
+    const drawing = await createDrawing();
 
     const objects = new Map<string, Buffer>();
     vi.mocked(uploadBuffer).mockImplementation(async (key, bytes) => {
@@ -189,25 +166,25 @@ describe("File reference lifetime", () => {
     mountStorage();
     const bytes = Buffer.from([1, 2, 3]);
     const uploaded = await request(app)
-      .put(`/drawings/${drawing.id}/files/peer-first`)
+      .put(`/drawings/${drawing.id}/files/owner-first`)
       .set("Content-Type", "image/png")
       .send(bytes);
     expect(uploaded.status).toBe(200);
     const downloaded = await request(app).get(
-      `/files/${drawing.id}/peer-first`,
+      `/files/${drawing.id}/owner-first`,
     );
     expect(downloaded.status).toBe(302);
     const diff = await request(app).get(`/drawings/${drawing.id}/files/diff`);
-    expect(diff.status).toBe(404);
+    expect(diff.status).toBe(200);
     const row = await prisma.drawingFile.findUnique({
       where: {
-        drawingId_fileId: { drawingId: drawing.id, fileId: "peer-first" },
+        drawingId_fileId: { drawingId: drawing.id, fileId: "owner-first" },
       },
     });
-    expect(row?.s3Key).toMatch(new RegExp(`^${peer.id}/${drawing.id}/`));
+    expect(row?.s3Key).toMatch(new RegExp(`^${ownerId}/${drawing.id}/`));
     expect(objects.get(row!.s3Key!)).toEqual(bytes);
     const retried = await request(app)
-      .put(`/drawings/${drawing.id}/files/peer-first`)
+      .put(`/drawings/${drawing.id}/files/owner-first`)
       .set("Content-Type", "image/png")
       .send(Buffer.from([9, 9, 9]));
     expect(retried.status).toBe(200);

@@ -11,7 +11,6 @@ import {
   SidebarContextMenu,
   type SidebarContextMenuState,
 } from "./sidebar/SidebarContextMenu";
-import { useLocale } from "../context/useLocale";
 
 interface SidebarProps {
   collections: Collection[];
@@ -32,7 +31,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onDeleteCollection,
   onDrop,
 }) => {
-  const { t } = useLocale();
   const [isCreating, setIsCreating] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -89,7 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         >
           <div className="space-y-1">
             <div className="px-6 pb-2 text-xs font-semibold text-slate-400 dark:text-neutral-500">
-              {t("sidebar.library")}
+              Library
             </div>
             <div className="pl-3 pr-2">
               <button
@@ -109,15 +107,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       : "text-slate-400 dark:text-neutral-500",
                   )}
                 />
-                <span className="min-w-0 flex-1 text-left">
-                  {t("sidebar.allDrawings")}
-                </span>
+                <span className="min-w-0 flex-1 text-left">All Drawings</span>
               </button>
             </div>
             <SidebarItem
               id={null}
               icon={<Archive size={18} />}
-              label={t("sidebar.unorganized")}
+              label="Unorganized"
               isActive={selectedCollectionId === null}
               onClick={() => onSelectCollection(null)}
               onDrop={onDrop}
@@ -126,7 +122,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="space-y-1">
             <div className="flex items-center justify-between px-6 pb-2 group/header">
               <span className="text-xs font-semibold text-slate-400 dark:text-neutral-500">
-                {t("sidebar.collections")}
+                Collections
               </span>
               <button
                 onClick={(e) => {
@@ -134,7 +130,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   setIsCreating(true);
                 }}
                 className="ui-icon-button h-7 w-7 border-transparent bg-transparent shadow-none opacity-0 group-hover/header:opacity-100 dark:bg-transparent"
-                title={t("sidebar.newCollection")}
+                title="New Collection"
               >
                 <Plus size={14} strokeWidth={2.5} />
               </button>
@@ -155,7 +151,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     type="text"
                     value={newCollectionName}
                     onChange={(e) => setNewCollectionName(e.target.value)}
-                    placeholder={t("sidebar.newCollectionPlaceholder")}
+                    placeholder="New Collection..."
                     aria-label="Collection name"
                     className="ui-input min-w-0 w-full py-1.5 font-medium"
                     onBlur={() => !newCollectionName && setIsCreating(false)}
@@ -220,9 +216,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
       <ConfirmModal
         isOpen={!!collectionToDelete}
-        title={t("sidebar.deleteCollection")}
-        message={t("sidebar.deleteCollectionMessage")}
-        confirmText={t("sidebar.deleteCollection")}
+        title="Delete Collection"
+        message="Are you sure you want to delete this collection? All drawings inside will be moved to Unorganized."
+        confirmText="Delete Collection"
         onConfirm={() => {
           if (collectionToDelete) {
             onDeleteCollection(collectionToDelete);

@@ -21,11 +21,7 @@ import {
   storeDrawingFileOnce,
 } from "../drawingFileStore";
 import { config } from "../config";
-import {
-  canViewDrawing,
-  canEditDrawing,
-  getDrawingAccess,
-} from "../authz/sharing";
+import { WORKSPACE_USER_ID } from "../middleware/workspace";
 
 const DOWNLOAD_EXPIRES_IN = 3600; // 1 hour   – cached by browser
 
@@ -110,11 +106,11 @@ export const registerFileRoutes = (
         return res.status(400).json({ error: "Invalid id segment" });
       }
 
-      const access = await getDrawingAccess({
-        prisma,
-        drawingId,
+      const drawing = await prisma.drawing.findFirst({
+        where: { id: drawingId, userId: WORKSPACE_USER_ID },
+        select: { id: true },
       });
-      if (!canEditDrawing(access)) {
+      if (!drawing) {
         // 404 (not 403) so we don't leak the drawing's existence.
         return res.status(404).json({ error: "Drawing not found" });
       }
@@ -154,18 +150,9 @@ export const registerFileRoutes = (
       }
 
       if (isS3Enabled()) {
-        // Collaborators may upload, but storage listing and drawing cleanup
-        // use the drawing owner's namespace, just like inline scene files.
-        const drawing = await prisma.drawing.findUnique({
-          where: { id: drawingId },
-          select: { userId: true },
-        });
-        if (!drawing) {
-          return res.status(404).json({ error: "Drawing not found" });
-        }
         const ext = MIME_TO_EXT[mimeType] ?? "bin";
         const s3Key = buildS3Key(
-          drawing.userId,
+          WORKSPACE_USER_ID,
           drawingId,
           fileId,
           ext,
@@ -213,13 +200,11 @@ export const registerFileRoutes = (
         return res.status(400).json({ error: "Invalid id segment" });
       }
 
-      // Drawing access decides authorization; fall back to 404 on
-      // miss so we don't leak existence of a (drawing, fileId) pair.
-      const access = await getDrawingAccess({
-        prisma,
-        drawingId,
+      const drawing = await prisma.drawing.findFirst({
+        where: { id: drawingId, userId: WORKSPACE_USER_ID },
+        select: { id: true },
       });
-      if (!canViewDrawing(access)) {
+      if (!drawing) {
         return res.status(404).json({ error: "File not found" });
       }
 

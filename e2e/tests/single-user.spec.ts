@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { createDrawing, deleteDrawing } from "./helpers/api";
 
+test.use({ locale: "zh-CN" });
+
 test("retired account URLs lead to the library and preferences remain local", async ({
   page,
 }) => {
@@ -27,46 +29,53 @@ test("retired account URLs lead to the library and preferences remain local", as
   expect(accountRequests).toEqual([]);
 });
 
-test("link controls work without account invitations or a separate visitor identity", async ({
+test("the editor omits sharing and retired shared URLs return to the library", async ({
   page,
-  browser,
 }) => {
   const drawing = await createDrawing(page.request, {
-    name: "Single-user link controls",
+    name: "Single-user drawing controls",
+  });
+  const sharingRequests: string[] = [];
+  page.on("request", (request) => {
+    if (/\/(sharing|link-shares)(\/|$)/.test(new URL(request.url()).pathname)) {
+      sharingRequests.push(request.url());
+    }
   });
   try {
+    await page.addInitScript(() => {
+      localStorage.setItem("excalidash-lang", "zh-CN");
+      localStorage.setItem(
+        "excalidash-preferences",
+        JSON.stringify({ language: "zh-CN" }),
+      );
+    });
     await page.goto(`/editor/${drawing.id}`);
-    await page.getByRole("button", { name: "Share", exact: true }).click();
-    const dialog = page.getByRole("dialog", { name: "Share drawing" });
-    await expect(dialog).toBeVisible();
-    await expect(dialog.getByRole("textbox")).toHaveCount(0);
-    const access = dialog.getByRole("button", { name: "Link access" });
-    await access.click();
-    await page.getByRole("option", { name: "Anyone with the link" }).click();
     await expect(
-      dialog.getByRole("button", { name: "Copy Link" }),
-    ).toBeEnabled();
-    await expect(dialog.getByRole("status")).toHaveCount(0);
-    await access.click();
-    await page.getByRole("option", { name: "Restricted" }).click();
+      page.locator("canvas.excalidraw__canvas.interactive"),
+    ).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("lang", "en");
     await expect(
-      dialog.getByRole("button", { name: "Copy Link" }),
-    ).toBeDisabled();
-
-    const visitor = await browser.newContext();
-    try {
-      const otherPage = await visitor.newPage();
-      await otherPage.goto(new URL(`/shared/${drawing.id}`, page.url()).href);
-      await expect(
-        otherPage.locator("canvas.excalidraw__canvas.interactive"),
-      ).toBeVisible();
-      // A revoked link cannot restrict the workspace owner's access.
-      await expect(
-        otherPage.getByRole("button", { name: "Share", exact: true }),
-      ).toBeVisible();
-    } finally {
-      await visitor.close();
-    }
+      page.locator('label:has([data-testid="toolbar-rectangle"])'),
+    ).toHaveAttribute("title", /Rectangle/);
+    await expect(
+      page.getByRole("button", { name: "Share", exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Version History", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Export drawing", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("dialog", { name: "Share drawing" }),
+    ).toHaveCount(0);
+    await page.goto(`/shared/${drawing.id}`);
+    await expect(page.getByPlaceholder("Search drawings...")).toBeVisible();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(
+      page.locator("canvas.excalidraw__canvas.interactive"),
+    ).toHaveCount(0);
+    expect(sharingRequests).toEqual([]);
   } finally {
     await deleteDrawing(page.request, drawing.id);
   }

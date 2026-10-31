@@ -19,7 +19,7 @@ type RecoveryParams = {
   persistence: ReturnType<typeof useEditorPersistence>;
   invalidateFileLoads: () => void;
   setDrawingName: (name: string) => void;
-  setAccessLevel: (level: "none" | "view" | "edit" | "owner") => void;
+  setAccessLevel: (level: "none" | "owner") => void;
   computeElementOrderSig: (elements: readonly any[]) => string;
   recordElementVersion: (element: any) => void;
   normalizeImageElementStatus: (

@@ -1,7 +1,6 @@
 import * as api from "../api";
 import React, { useEffect, useState, useRef } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { getInitialLangCode } from "../components/LanguageSelector";
+import { useParams, useNavigate } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
 import { usePreference } from "../context/PreferencesContext";
 import { useEditorChrome } from "./editor/useEditorChrome";
@@ -36,12 +35,9 @@ const ExcalidrawEditor: React.FC = () => {
   useKeyboardLayoutFix();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
   const { theme, toggleTheme } = useTheme();
-  const [accessLevel, setAccessLevel] = useState<
-    "none" | "view" | "edit" | "owner"
-  >("none");
-  const canEdit = accessLevel === "edit" || accessLevel === "owner";
+  const [accessLevel, setAccessLevel] = useState<"none" | "owner">("none");
+  const canEdit = accessLevel === "owner";
   const [drawingName, setDrawingName] = useState("Drawing Editor");
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState("");
@@ -54,22 +50,15 @@ const ExcalidrawEditor: React.FC = () => {
     id,
     editorAutoHide,
   );
-  const [isShareOpen, setIsShareOpen] = useState(false);
-  const [langCode, setLangCode] = usePreference(
-    "language",
-    getInitialLangCode(),
-  );
   const [gridStep, setGridStep] = usePreference("gridStep", DEFAULT_GRID_STEP);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const historyButtonRef = useRef<HTMLButtonElement>(null);
-  const shareButtonRef = useRef<HTMLButtonElement>(null);
   const [historyPreview, setHistoryPreview] =
     useState<api.DrawingSnapshotFull | null>(null);
   const { isHeaderVisible, setIsHeaderVisible } = useEditorChrome({
     drawingName,
     autoHideEnabled,
     isRenaming,
-    isShareOpen,
   });
   const [isReady, setIsReady] = useState(false);
   const {
@@ -229,8 +218,6 @@ const ExcalidrawEditor: React.FC = () => {
   );
   const { invalidateFileLoads } = useEditorSceneLoader({
     id,
-    location,
-    navigate,
     refs: sceneLoaderRefs,
     setAccessLevel,
     setDrawingName,
@@ -330,7 +317,6 @@ const ExcalidrawEditor: React.FC = () => {
     <>
       <EditorView
         id={id}
-        accessLevel={accessLevel}
         autoHideEnabled={autoHideEnabled}
         autosaveFailing={autosaveFailing || unsaved || conflict}
         resolving={resolving}
@@ -342,11 +328,9 @@ const ExcalidrawEditor: React.FC = () => {
         isHistoryOpen={isHistoryOpen}
         historyPreview={isHistoryOpen ? historyPreview : null}
         historyButtonRef={historyButtonRef}
-        shareButtonRef={shareButtonRef}
         isRenaming={isRenaming}
         isSavingOnLeave={isSavingOnLeave}
         isSceneLoading={isSceneLoading}
-        langCode={langCode}
         loadError={loadError}
         newName={newName}
         theme={theme}
@@ -361,12 +345,8 @@ const ExcalidrawEditor: React.FC = () => {
         onRenameStart={handleRenameStart}
         onRenameSubmit={handleRenameSubmit}
         onSetExcalidrawAPI={setExcalidrawAPI}
-        onSetLangCode={setLangCode}
         gridStep={gridStep}
         onSetGridStep={setGridStep}
-        onShareOpen={() => setIsShareOpen(true)}
-        isShareOpen={isShareOpen}
-        onCloseShare={() => setIsShareOpen(false)}
         onHistoryOpen={() => setIsHistoryOpen(true)}
         onToggleAutoHide={handleToggleAutoHide}
         onToggleTheme={toggleTheme}

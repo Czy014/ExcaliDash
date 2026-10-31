@@ -2,11 +2,6 @@ import { WORKSPACE_USER_ID } from "../../middleware/workspace";
 import express from "express";
 import { v4 as uuidv4 } from "uuid";
 import { Prisma } from "../../generated/client";
-import {
-  canEditDrawing,
-  getDrawingAccess,
-  isOwnerAccess,
-} from "../../authz/sharing";
 import { rewritePreviewForInternedFiles } from "../../fileProcessing";
 import {
   getUserTrashCollectionId,
@@ -182,22 +177,15 @@ export const registerDrawingCreateUpdateRoutes = (
     "/drawings/:id",
     asyncHandler(async (req, res) => {
       const { id } = req.params;
-      const access = await getDrawingAccess({
-        prisma,
-        drawingId: id,
+      const existingDrawing = await prisma.drawing.findFirst({
+        where: { id, userId: WORKSPACE_USER_ID },
       });
-      if (!canEditDrawing(access)) {
+      if (!existingDrawing) {
         return res.status(404).json({
           error: "Drawing not found",
           message: "Drawing does not exist",
         });
       }
-
-      const existingDrawing = await prisma.drawing.findUnique({
-        where: { id },
-      });
-      if (!existingDrawing)
-        return res.status(404).json({ error: "Drawing not found" });
 
       const parsed = drawingUpdateSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -292,12 +280,6 @@ export const registerDrawingCreateUpdateRoutes = (
       }
 
       if (payload.collectionId !== undefined) {
-        if (!isOwnerAccess(access)) {
-          return res.status(403).json({
-            error: "Forbidden",
-            message: "Only the owner can move drawings between collections",
-          });
-        }
         if (payload.collectionId === "trash") {
           await ensureTrashCollection(prisma, ownerUserId);
           (data as Prisma.DrawingUncheckedUpdateInput).collectionId =
@@ -385,7 +367,7 @@ export const registerDrawingCreateUpdateRoutes = (
         elements: savedElements,
         appState: parseJsonField(updatedDrawing.appState, {}),
         files: savedFiles,
-        accessLevel: access,
+        accessLevel: "owner",
       });
     }),
   );

@@ -11,7 +11,7 @@ import { setupSlides, workspaceSlides } from "../.vitepress/theme/screenshot-flo
 
 Open ExcaliDash to enter the library directly. There is no account setup or sign-in. The only supported mode is `AUTH_MODE=disabled`.
 
-All visitors use the same workspace identity and can change its drawings. Limit network access to the people who may manage the whole library; public links do not isolate visitors from that identity.
+All visitors use the same workspace identity and can change its drawings. Limit network access to the people who may manage the whole library. There are no separate visitor permissions.
 
 ## Your first drawing
 

@@ -193,52 +193,6 @@ export const getDrawingPreview = async (id: string): Promise<string | null> => {
   return typeof preview === "string" ? normalizePreviewSvg(preview) : null;
 };
 
-export type DrawingLinkShareRow = {
-  id: string;
-  permission: "view" | "edit";
-  expiresAt: string | null;
-  revokedAt: string | null;
-  createdAt: string | number | Date;
-  updatedAt: string | number | Date;
-  lastUsedAt: string | null;
-};
-
-export const getDrawingSharing = async (
-  drawingId: string,
-): Promise<{
-  linkShares: DrawingLinkShareRow[];
-}> => {
-  const response = await api.get<{
-    linkShares: DrawingLinkShareRow[];
-  }>(`/drawings/${drawingId}/sharing`);
-  return response.data;
-};
-
-export const createLinkShare = async (
-  drawingId: string,
-  params: {
-    permission: "view" | "edit";
-    expiresAt?: string | null;
-    passphrase?: string;
-  },
-): Promise<{ share: DrawingLinkShareRow }> => {
-  const response = await api.post<{ share: DrawingLinkShareRow }>(
-    `/drawings/${drawingId}/link-shares`,
-    params,
-  );
-  return response.data;
-};
-
-export const revokeLinkShare = async (
-  drawingId: string,
-  shareId: string,
-): Promise<{ success: true }> => {
-  const response = await api.delete<{ success: true }>(
-    `/drawings/${drawingId}/link-shares/${shareId}`,
-  );
-  return response.data;
-};
-
 export const createDrawing = async (
   name?: string,
   collectionId?: string | null,

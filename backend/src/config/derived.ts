@@ -4,12 +4,6 @@
  */
 import { readRaw } from "./env";
 
-export interface LinkShareConfig {
-  editDefaultTtlMs: number;
-  viewDefaultTtlMs: number;
-  maxTtlMs: number;
-}
-
 export interface UpdateCheckConfig {
   outbound: boolean;
   githubToken: string | null;
@@ -29,27 +23,6 @@ export const parseDrawingsCacheTtlMs = (): number => {
   if (!Number.isFinite(parsed) || parsed <= 0) return 5_000;
   return parsed;
 };
-
-const parseLinkShareTtl = (name: string, defaultMs: number): number => {
-  const raw = readRaw(name);
-  const parsed = raw ? Number(raw) : NaN;
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultMs;
-};
-
-export const resolveLinkShareConfig = (): LinkShareConfig => ({
-  editDefaultTtlMs: parseLinkShareTtl(
-    "LINK_SHARE_EDIT_DEFAULT_TTL_MS",
-    7 * 24 * 60 * 60 * 1000,
-  ),
-  viewDefaultTtlMs: parseLinkShareTtl(
-    "LINK_SHARE_VIEW_DEFAULT_TTL_MS",
-    30 * 24 * 60 * 60 * 1000,
-  ),
-  maxTtlMs: parseLinkShareTtl(
-    "LINK_SHARE_MAX_TTL_MS",
-    90 * 24 * 60 * 60 * 1000,
-  ),
-});
 
 export const resolveUpdateCheckConfig = (): UpdateCheckConfig => {
   const outboundRaw = (readRaw("UPDATE_CHECK_OUTBOUND") ?? "true")

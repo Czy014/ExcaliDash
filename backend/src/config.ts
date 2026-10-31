@@ -15,11 +15,9 @@ import {
   readString,
 } from "./config/env";
 import {
-  type LinkShareConfig,
   type UpdateCheckConfig,
   parseDrawingsCacheTtlMs,
   parseTrustProxy,
-  resolveLinkShareConfig,
   resolveUpdateCheckConfig,
 } from "./config/derived";
 dotenv.config();
@@ -67,7 +65,6 @@ interface Config {
   enforceHttpsRedirect: boolean;
   backups: BackupConfig;
   s3: S3Config;
-  linkShare: LinkShareConfig;
   updateCheck: UpdateCheckConfig;
 }
 
@@ -171,7 +168,6 @@ export const config: Config = {
   enforceHttpsRedirect: readBoolean("ENFORCE_HTTPS_REDIRECT", true),
   backups: resolveBackupConfig(),
   s3: resolveS3Config(),
-  linkShare: resolveLinkShareConfig(),
   updateCheck: resolveUpdateCheckConfig(),
 };
 console.log("Configuration validated successfully");

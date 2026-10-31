@@ -9,7 +9,6 @@ import { ThemeProvider } from "./context/ThemeContext";
 import { UploadProvider } from "./context/UploadContext";
 import { PreferencesProvider } from "./context/PreferencesContext";
 import { Loader2 } from "lucide-react";
-import { LocaleProvider } from "./context/LocaleProvider";
 
 const Dashboard = lazy(() =>
   import("./pages/Dashboard").then((m) => ({ default: m.Dashboard })),
@@ -30,22 +29,19 @@ function App() {
   return (
     <Router>
       <PreferencesProvider>
-        <LocaleProvider>
-          <ThemeProvider>
-            <UploadProvider>
-              <Suspense fallback={<PageLoader />}>
-                <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/collections" element={<Dashboard />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="/editor/:id" element={<Editor />} />
-                  <Route path="/shared/:id" element={<Editor />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </Suspense>
-            </UploadProvider>
-          </ThemeProvider>
-        </LocaleProvider>
+        <ThemeProvider>
+          <UploadProvider>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/collections" element={<Dashboard />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/editor/:id" element={<Editor />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </UploadProvider>
+        </ThemeProvider>
       </PreferencesProvider>
     </Router>
   );

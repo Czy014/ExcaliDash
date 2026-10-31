@@ -9,7 +9,6 @@ type Preferences = {
   theme?: "light" | "dark";
   dashboardSortField?: "name" | "createdAt" | "updatedAt";
   dashboardSortDirection?: "asc" | "desc";
-  language?: string;
   gridStep?: number;
   editorAutoHide?: boolean;
   compactSidebar?: boolean;
@@ -23,7 +22,6 @@ const KNOWN_KEYS: PreferenceKey[] = [
   "theme",
   "dashboardSortField",
   "dashboardSortDirection",
-  "language",
   "gridStep",
   "editorAutoHide",
   "compactSidebar",
@@ -41,7 +39,7 @@ const pickKnown = (source: Partial<Preferences>): Preferences => {
 };
 
 // One-time migration of the pre-context localStorage keys so an upgrade never
-// drops a user's already-chosen theme/sort/language.
+// drops a user's already-chosen theme or sort order.
 const readLegacyPreferences = (): Preferences => {
   const legacy: Preferences = {};
   try {
@@ -49,12 +47,6 @@ const readLegacyPreferences = (): Preferences => {
     if (theme === "dark" || theme === "light") legacy.theme = theme;
   } catch {
     /* ignore unavailable storage */
-  }
-  try {
-    const lang = localStorage.getItem("excalidash-lang");
-    if (lang) legacy.language = lang;
-  } catch {
-    /* ignore */
   }
   try {
     const rawSort = localStorage.getItem("excalidash-dashboard-sort");

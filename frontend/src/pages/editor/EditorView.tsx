@@ -10,18 +10,14 @@ import {
   Download,
   History,
   Loader2,
-  Share2,
 } from "lucide-react";
 import clsx from "clsx";
 import { Toaster } from "sonner";
-import { LanguageSelector } from "../../components/LanguageSelector";
 import { GridStepSelector } from "../../components/GridStepSelector";
-import { ShareModal } from "../../components/ShareModal";
 import { UIOptions, validateEmbeddableUrl } from "./shared";
 
 type EditorViewProps = {
   id?: string;
-  accessLevel: "none" | "view" | "edit" | "owner";
   autoHideEnabled: boolean;
   autosaveFailing: boolean;
   resolving: boolean;
@@ -33,11 +29,9 @@ type EditorViewProps = {
   isHistoryOpen: boolean;
   historyPreview: DrawingSnapshotFull | null;
   historyButtonRef: React.RefObject<HTMLButtonElement>;
-  shareButtonRef: React.RefObject<HTMLButtonElement>;
   isRenaming: boolean;
   isSavingOnLeave: boolean;
   isSceneLoading: boolean;
-  langCode: string;
   loadError: string | null;
   newName: string;
   theme: string;
@@ -56,12 +50,8 @@ type EditorViewProps = {
   onRenameStart: () => void;
   onRenameSubmit: (event: React.FormEvent) => void;
   onSetExcalidrawAPI: (api: any) => void;
-  onSetLangCode: (langCode: string) => void;
   gridStep: number;
   onSetGridStep: (gridStep: number) => void;
-  onShareOpen: () => void;
-  isShareOpen: boolean;
-  onCloseShare: () => void;
   onHistoryOpen: () => void;
   onToggleAutoHide: () => void;
   onToggleTheme: () => void;
@@ -69,7 +59,6 @@ type EditorViewProps = {
 
 export const EditorView: React.FC<EditorViewProps> = ({
   id,
-  accessLevel,
   autoHideEnabled,
   autosaveFailing,
   resolving,
@@ -81,11 +70,9 @@ export const EditorView: React.FC<EditorViewProps> = ({
   isHistoryOpen,
   historyPreview,
   historyButtonRef,
-  shareButtonRef,
   isRenaming,
   isSavingOnLeave,
   isSceneLoading,
-  langCode,
   loadError,
   newName,
   theme,
@@ -100,12 +87,8 @@ export const EditorView: React.FC<EditorViewProps> = ({
   onRenameStart,
   onRenameSubmit,
   onSetExcalidrawAPI,
-  onSetLangCode,
   gridStep,
   onSetGridStep,
-  onShareOpen,
-  isShareOpen,
-  onCloseShare,
   onHistoryOpen,
   onToggleAutoHide,
   onToggleTheme,
@@ -123,7 +106,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
     <header
       className={clsx(
         "h-16 bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 flex items-center px-4 justify-between z-10 fixed top-0 left-0 right-0 transition-all duration-300",
-        isHeaderVisible || isShareOpen ? "translate-y-0" : "-translate-y-full",
+        isHeaderVisible ? "translate-y-0" : "-translate-y-full",
       )}
     >
       <div className="flex items-center gap-4">
@@ -188,18 +171,6 @@ export const EditorView: React.FC<EditorViewProps> = ({
             <History size={20} />
           </button>
         ) : null}
-        {accessLevel === "owner" && id ? (
-          <div className="relative inline-flex">
-            <button
-              ref={shareButtonRef}
-              onClick={onShareOpen}
-              className="ui-toolbar-button"
-              title="Share"
-            >
-              <Share2 size={20} />
-            </button>
-          </div>
-        ) : null}
         <button
           onClick={onToggleAutoHide}
           className="ui-toolbar-button"
@@ -221,15 +192,6 @@ export const EditorView: React.FC<EditorViewProps> = ({
         </button>
       </div>
     </header>
-    {accessLevel === "owner" && id ? (
-      <ShareModal
-        drawingId={id}
-        drawingName={drawingName}
-        isOpen={isShareOpen}
-        onClose={onCloseShare}
-        anchorRef={shareButtonRef}
-      />
-    ) : null}
     <div
       ref={editorContainerRef}
       className="relative w-full flex-1"
@@ -264,7 +226,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
         <Excalidraw
           key={id}
           theme={theme === "dark" ? "dark" : "light"}
-          langCode={langCode}
+          langCode="en"
           initialData={initialData}
           onChange={onCanvasChange}
           onLibraryChange={onLibraryChange}
@@ -287,9 +249,6 @@ export const EditorView: React.FC<EditorViewProps> = ({
             <MainMenu.ItemCustom>
               <GridStepSelector gridStep={gridStep} onChange={onSetGridStep} />
             </MainMenu.ItemCustom>
-            <MainMenu.ItemCustom>
-              <LanguageSelector langCode={langCode} onChange={onSetLangCode} />
-            </MainMenu.ItemCustom>
           </MainMenu>
         </Excalidraw>
       ) : (
@@ -300,11 +259,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
         </div>
       )}
       {historyPreview ? (
-        <HistoryPreviewCanvas
-          snapshot={historyPreview}
-          theme={theme}
-          langCode={langCode}
-        />
+        <HistoryPreviewCanvas snapshot={historyPreview} theme={theme} />
       ) : null}
       <Toaster position="bottom-center" />
     </div>

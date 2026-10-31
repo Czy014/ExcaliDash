@@ -1,25 +1,20 @@
 # Issue tracker
 
-本 fork 使用 [GitHub Issues](https://github.com/Czy014/ExcaliDash/issues) 记录 bug
-和待办；功能设计、实施任务、验证与归档继续使用本仓库的 `openspec/`。
-有 OpenSpec change 的工作无需另建一个同内容的 issue。
+This fork uses [GitHub Issues](https://github.com/Czy014/ExcaliDash/issues) for bugs and backlog items. Feature design, implementation tasks, validation and archives belong in this repository's `openspec/`. Work already covered by an OpenSpec change does not need a duplicate issue.
 
-## 审查时读取 issue
+## Reading issues during review
 
-本 fork 新增提交中的 `#123` 默认指向 `Czy014/ExcaliDash`。用只读命令取得正文、
-标签和讨论，再结合提交关联的 OpenSpec change 审查：
+A `#123` reference in a new fork commit points to `Czy014/ExcaliDash` by default. Fetch the issue text, labels and discussion with read-only commands, then review it alongside the commit's OpenSpec change:
 
 ```sh
 gh issue view 123 --repo Czy014/ExcaliDash --json number,title,body,state,labels,url
 gh issue view 123 --repo Czy014/ExcaliDash --comments
 ```
 
-上游历史提交中的 issue 编号属于 `ZimengXiong/ExcaliDash`，不能按本 fork 的编号
-查询。引用明确的上游 URL 时使用原仓库：
+Issue numbers in historical upstream commits belong to `ZimengXiong/ExcaliDash`. Do not resolve them against the fork's issue numbers. Use the original repository when an upstream issue URL is supplied:
 
 ```sh
 gh issue view 123 --repo ZimengXiong/ExcaliDash --json number,title,body,state,labels,url
 ```
 
-没有 issue 引用时，直接以 `openspec/changes/`、归档 change 及主规格为需求来源。
-不要因缺少 issue 而跳过规格审查，也不要自动创建、评论或关闭 issue。
+When no issue is referenced, use `openspec/changes/`, archived changes and current specifications as the requirements source. Do not skip specification review because there is no issue, and do not automatically create, comment on or close issues.

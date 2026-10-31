@@ -9,11 +9,8 @@ import {
   isS3Enabled,
   listS3Objects,
 } from "../../s3";
-import { config } from "../../config";
 
 export type DrawingRouteContext = DashboardRouteDeps & {
-  resolveDefaultTtlMs: (permission: "view" | "edit") => number;
-  resolveMaxTtlMs: () => number;
   cleanupS3FilesForDrawing: (
     drawingId: string,
     userId: string,
@@ -30,13 +27,6 @@ export const createDrawingRouteContext = (
   deps: DashboardRouteDeps,
 ): DrawingRouteContext => {
   const { prisma } = deps;
-
-  const resolveDefaultTtlMs = (permission: "view" | "edit"): number =>
-    permission === "edit"
-      ? config.linkShare.editDefaultTtlMs
-      : config.linkShare.viewDefaultTtlMs;
-
-  const resolveMaxTtlMs = (): number => config.linkShare.maxTtlMs;
 
   const cleanupS3FilesForDrawing = async (
     drawingId: string,
@@ -164,8 +154,6 @@ export const createDrawingRouteContext = (
 
   return {
     ...deps,
-    resolveDefaultTtlMs,
-    resolveMaxTtlMs,
     cleanupS3FilesForDrawing,
     cloneS3FileReferences,
   };

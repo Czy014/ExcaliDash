@@ -8,11 +8,9 @@ import { validateEmbeddableUrl } from "./shared";
 export const HistoryPreviewCanvas = ({
   snapshot,
   theme,
-  langCode,
 }: {
   snapshot: DrawingSnapshotFull;
   theme: string;
-  langCode: string;
 }) => (
   <div
     className="absolute inset-0 z-20"
@@ -30,7 +28,7 @@ export const HistoryPreviewCanvas = ({
         scrollToContent: true,
       }}
       theme={theme === "dark" ? "dark" : "light"}
-      langCode={langCode}
+      langCode="en"
       viewModeEnabled
       zenModeEnabled
       validateEmbeddable={validateEmbeddableUrl}

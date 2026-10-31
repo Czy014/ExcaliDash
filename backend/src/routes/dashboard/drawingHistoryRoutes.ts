@@ -1,9 +1,5 @@
 import express from "express";
-import {
-  canEditDrawing,
-  canViewDrawing,
-  getDrawingAccess,
-} from "../../authz/sharing";
+import { WORKSPACE_USER_ID } from "../../middleware/workspace";
 import { decodeSnapshotField } from "../../snapshots/snapshotCodec";
 import { applySceneUpdateTx, isVersionConflict } from "./sceneUpdate";
 import type { DrawingRouteContext } from "./drawingRouteContext";
@@ -23,11 +19,11 @@ export const registerDrawingHistoryRoutes = (
     "/drawings/:id/history",
     asyncHandler(async (req, res) => {
       const { id } = req.params;
-      const access = await getDrawingAccess({
-        prisma,
-        drawingId: id,
+      const drawing = await prisma.drawing.findFirst({
+        where: { id, userId: WORKSPACE_USER_ID },
+        select: { id: true },
       });
-      if (!canViewDrawing(access)) {
+      if (!drawing) {
         return res.status(404).json({ error: "Drawing not found" });
       }
 
@@ -66,11 +62,11 @@ export const registerDrawingHistoryRoutes = (
     "/drawings/:id/history/:snapshotId",
     asyncHandler(async (req, res) => {
       const { id, snapshotId } = req.params;
-      const access = await getDrawingAccess({
-        prisma,
-        drawingId: id,
+      const drawing = await prisma.drawing.findFirst({
+        where: { id, userId: WORKSPACE_USER_ID },
+        select: { id: true },
       });
-      if (!canViewDrawing(access)) {
+      if (!drawing) {
         return res.status(404).json({ error: "Drawing not found" });
       }
 
@@ -94,16 +90,10 @@ export const registerDrawingHistoryRoutes = (
     "/drawings/:id/history/:snapshotId/restore",
     asyncHandler(async (req, res) => {
       const { id, snapshotId } = req.params;
-      const access = await getDrawingAccess({
-        prisma,
-        drawingId: id,
-      });
-      if (!canEditDrawing(access)) {
-        return res.status(404).json({ error: "Drawing not found" });
-      }
-
       const [drawing, snapshot] = await Promise.all([
-        prisma.drawing.findUnique({ where: { id } }),
+        prisma.drawing.findFirst({
+          where: { id, userId: WORKSPACE_USER_ID },
+        }),
         prisma.drawingSnapshot.findFirst({
           where: { id: snapshotId, drawingId: id },
         }),
@@ -177,7 +167,7 @@ export const registerDrawingHistoryRoutes = (
         elements: parseJsonField(updated.elements, []),
         appState: parseJsonField(updated.appState, {}),
         files: parseJsonField(updated.files, {}),
-        accessLevel: access,
+        accessLevel: "owner",
       });
     }),
   );

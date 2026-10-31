@@ -60,7 +60,6 @@ export default defineConfig({
           { text: "Single-user access", link: "/guide/authentication" },
           { text: "Configuration", link: "/guide/configuration" },
           { text: "Personal editing", link: "/guide/personal-editing" },
-          { text: "Sharing", link: "/guide/collaboration" },
           { text: "Storage and backups", link: "/guide/storage-backups" },
         ],
       },

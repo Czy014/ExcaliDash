@@ -26,4 +26,4 @@ A page with no unsaved edits, queued saves, conflicts or recovery offers checks 
 
 ## Scope of this fork
 
-The drawing library, collections, trash, images, assets, import/export, history and public links remain. All visitors use a single workspace identity without sign-in. Public links do not isolate visitors from that identity; see [single-user access](/guide/authentication). Sharing does not enable simultaneous live editing.
+The drawing library, collections, trash, images, assets, import/export and history remain. The library and editor use English. All visitors use a single workspace identity without sign-in; see [single-user access](/guide/authentication). Public drawing links and sharing controls are removed.

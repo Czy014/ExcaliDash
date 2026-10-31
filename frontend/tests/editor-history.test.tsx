@@ -7,7 +7,6 @@ import { HistoryPreviewCanvas } from "../src/pages/editor/HistoryPreviewCanvas";
 import { useEditorChrome } from "../src/pages/editor/useEditorChrome";
 import { useEditorPersistence } from "../src/pages/editor/useEditorPersistence";
 import { useEditorCommands } from "../src/pages/editor/useEditorCommands";
-import { ShareModal } from "../src/components/ShareModal";
 import * as api from "../src/api";
 import { exportToSvg } from "@excalidraw/excalidraw";
 import { saveDrawingKeepalive } from "../src/pages/editor/keepaliveSave";
@@ -47,7 +46,6 @@ vi.mock("../src/api", () => ({
   updateLibrary: vi.fn(),
   getDrawingHistory: vi.fn(),
   getDrawingSnapshot: vi.fn(),
-  getDrawingSharing: vi.fn(async () => ({ permissions: [], linkShares: [] })),
   isAxiosError: (error: any) => Boolean(error.response),
 }));
 vi.mock("../src/utils/imageCompression", () => ({
@@ -58,9 +56,6 @@ vi.mock("../src/pages/editor/keepaliveSave", () => ({
   saveDrawingKeepalive: vi.fn(),
 }));
 vi.mock("react-router-dom", () => ({ useNavigate: () => vi.fn() }));
-vi.mock("../src/components/LanguageSelector", () => ({
-  LanguageSelector: () => null,
-}));
 vi.mock("../src/components/GridStepSelector", () => ({
   GridStepSelector: () => null,
 }));
@@ -232,11 +227,7 @@ function persistenceHarness() {
           }
         />
         {open && preview ? (
-          <HistoryPreviewCanvas
-            snapshot={preview}
-            theme="light"
-            langCode="en"
-          />
+          <HistoryPreviewCanvas snapshot={preview} theme="light" />
         ) : null}
       </>
     );
@@ -598,41 +589,14 @@ describe("paused and failed saves", () => {
   });
 });
 
-describe("sharing placement and chrome", () => {
-  it("portals the viewport dismiss layer and anchors the fixed popover to the button", async () => {
-    const close = vi.fn();
-    const anchor = {
-      getBoundingClientRect: () => ({ right: 1100, bottom: 48 }),
-    };
-    const renderer = await render(
-      <ShareModal
-        drawingId="drawing"
-        drawingName="Drawing"
-        isOpen
-        onClose={close}
-        anchorRef={ref(anchor as HTMLElement)}
-      />,
-    );
-    expect(portalTargets).toContain(document.body);
-    const dialog = renderer.root.findByProps({ "aria-label": "Share drawing" });
-    expect(dialog.props.className).toContain("fixed");
-    expect(dialog.props.style).toEqual({ right: 100, top: 56 });
-    const backdrop = renderer.root.findAll(
-      (node) =>
-        node.type === "div" && node.props.className?.includes("fixed inset-0"),
-    )[0];
-    await act(async () => backdrop.props.onClick());
-    expect(close).toHaveBeenCalledOnce();
-  });
-
-  it("cancels pending auto-hide timers while sharing is open and resumes after close", async () => {
+describe("editor chrome", () => {
+  it("cancels pending auto-hide timers while renaming and resumes afterward", async () => {
     let visible = true;
     function Chrome({ open }: { open: boolean }) {
       const chrome = useEditorChrome({
         drawingName: "Drawing",
         autoHideEnabled: true,
-        isRenaming: false,
-        isShareOpen: open,
+        isRenaming: open,
       });
       useLayoutEffect(() => {
         visible = chrome.isHeaderVisible;
@@ -651,11 +615,9 @@ describe("sharing placement and chrome", () => {
 
   it("keeps the live canvas mounted and blocks drops from reaching live import handlers during history", async () => {
     const drop = vi.fn();
-    const shareAnchor = ref(null);
     const renderer = await render(
       <EditorView
         id="drawing"
-        accessLevel="owner"
         canEdit
         autoHideEnabled
         autosaveFailing={false}
@@ -667,11 +629,9 @@ describe("sharing placement and chrome", () => {
         isHistoryOpen
         historyPreview={historicalSnapshot}
         historyButtonRef={ref(null)}
-        shareButtonRef={shareAnchor}
         isRenaming={false}
         isSavingOnLeave={false}
         isSceneLoading={false}
-        langCode="en"
         loadError={null}
         newName="Drawing"
         theme="light"
@@ -686,12 +646,8 @@ describe("sharing placement and chrome", () => {
         onRenameStart={vi.fn()}
         onRenameSubmit={vi.fn()}
         onSetExcalidrawAPI={vi.fn()}
-        onSetLangCode={vi.fn()}
         gridStep={20}
         onSetGridStep={vi.fn()}
-        onShareOpen={vi.fn()}
-        isShareOpen
-        onCloseShare={vi.fn()}
         onHistoryOpen={vi.fn()}
         onToggleAutoHide={vi.fn()}
         onToggleTheme={vi.fn()}
@@ -705,11 +661,16 @@ describe("sharing placement and chrome", () => {
     expect(canvases[1].props.initialData.elements).toBe(
       historicalSnapshot.elements,
     );
-    const share = renderer.root.findByType(ShareModal);
-    expect(share.props.anchorRef).toBe(shareAnchor);
-    expect(share.parent?.type).not.toBe("header");
+    expect(canvases.every((canvas) => canvas.props.langCode === "en")).toBe(
+      true,
+    );
+    expect(
+      renderer.root.findAll(
+        (node) => node.type === "button" && node.props.title === "Share",
+      ),
+    ).toHaveLength(0);
     expect(renderer.root.findByType("header").props.className).toContain(
-      "translate-y-0",
+      "-translate-y-full",
     );
     const event = { preventDefault: vi.fn(), stopPropagation: vi.fn() };
     renderer.root

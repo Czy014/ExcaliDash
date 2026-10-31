@@ -66,7 +66,7 @@ Drawings are stored on your server so you can return to them from another device
 
 ### What does ExcaliDash add to Excalidraw?
 
-ExcaliDash embeds the Excalidraw editor and adds a dashboard, persistent drawing storage, collections, public links, local drafts and version history in a single-user workspace.
+ExcaliDash embeds the Excalidraw editor and adds a dashboard, persistent drawing storage, collections, local drafts and version history in a single-user workspace.
 
 ### Can I open a drawing in multiple tabs?
 
