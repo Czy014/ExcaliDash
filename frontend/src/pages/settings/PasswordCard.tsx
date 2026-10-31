@@ -13,7 +13,7 @@ import {
   SettingsRow,
   settingsButtonClass,
   settingsSelectClass,
-} from "../settings/SettingsRow";
+} from "./SettingsRow";
 
 const roseButtonClass = "ui-button-danger";
 

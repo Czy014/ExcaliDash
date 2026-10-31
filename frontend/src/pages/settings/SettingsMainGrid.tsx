@@ -117,7 +117,7 @@ export const SettingsMainGrid = ({
         icon={<PanelLeft size={20} />}
         tileClassName="border-black bg-violet-400 text-black dark:border-neutral-700 dark:bg-violet-400 dark:text-black"
         title="Compact sidebar"
-        description="Keep account actions in the avatar menu"
+        description="Keep workspace tools in a menu"
       >
         <PlayfulSwitch
           checked={compactSidebar}

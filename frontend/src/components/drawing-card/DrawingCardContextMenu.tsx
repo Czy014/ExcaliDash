@@ -4,7 +4,6 @@ import {
   ArrowRight,
   Copy,
   Download,
-  EyeOff,
   FolderInput,
   HardDrive,
   Loader2,
@@ -30,7 +29,6 @@ interface DrawingCardContextMenuProps {
   onMoveToCollection: (id: string, collectionId: string | null) => void;
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
-  onHide?: (id: string) => void;
   onManageStorage: () => void;
   onExport: (e: React.MouseEvent) => Promise<void>;
 }
@@ -53,7 +51,6 @@ export const DrawingCardContextMenu: React.FC<DrawingCardContextMenuProps> = ({
   onMoveToCollection,
   onDuplicate,
   onDelete,
-  onHide,
   onManageStorage,
   onExport,
 }) => {
@@ -194,20 +191,6 @@ export const DrawingCardContextMenu: React.FC<DrawingCardContextMenuProps> = ({
               className="ui-menu-item ui-menu-item-danger"
             >
               <Trash2 size={14} /> Delete
-            </button>
-          </>
-        ) : null}
-        {isShared && onHide ? (
-          <>
-            <div className="ui-menu-separator" />
-            <button
-              onClick={() => {
-                onHide(drawing.id);
-                onClose();
-              }}
-              className="ui-menu-item"
-            >
-              <EyeOff size={14} /> Hide from my list
             </button>
           </>
         ) : null}

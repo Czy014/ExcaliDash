@@ -52,7 +52,7 @@ docker compose -f docker-compose.prod.yml -f compose.override.yml up -d
 
 ## Workspace preferences
 
-For appearance and editor preferences, open the account menu and select **Settings**. The controls below change workspace preferences; server environment variables are configured in the files above.
+For appearance and editor preferences, open the workspace menu and select **Settings**. When authentication is enabled, login email and password controls are also in **Settings**, under **Account security**. The controls below change workspace preferences; server environment variables are configured in the files above.
 
 <ThemeScreenshot light="/images/screenshots/settings-light.png" dark="/images/screenshots/settings.png" alt="Settings with appearance and editor preferences" />
 

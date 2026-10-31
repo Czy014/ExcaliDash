@@ -1,8 +1,8 @@
 import { expect, type Page } from "@playwright/test";
 
-export const openAccountMenu = async (page: Page) => {
+export const openWorkspaceMenu = async (page: Page) => {
   const toggle = page.getByRole("button", {
-    name: "Account menu",
+    name: "Workspace menu",
     exact: true,
   });
   // Navigation can finish before React mounts the sidebar. Wait for either

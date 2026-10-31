@@ -35,7 +35,6 @@ type DashboardToolbarProps = {
   allSelected: boolean;
   hasSelection: boolean;
   isTrashView: boolean;
-  isSharedView: boolean;
   isSharedCollection: boolean;
   currentCollection?: Collection;
   showBulkMoveMenu: boolean;
@@ -64,7 +63,6 @@ export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
   allSelected,
   hasSelection,
   isTrashView,
-  isSharedView,
   isSharedCollection,
   currentCollection,
   showBulkMoveMenu,
@@ -83,8 +81,7 @@ export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
   onViewerActionError,
 }) => {
   const canModifySelection =
-    !isSharedView &&
-    (!isSharedCollection || currentCollection?.sharedRole === "edit");
+    !isSharedCollection || currentCollection?.sharedRole === "edit";
 
   return (
     <div className="mb-8 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
@@ -259,18 +256,16 @@ export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
             }
             document.getElementById("dashboard-import")?.click();
           }}
-          disabled={isTrashView || isSharedView}
+          disabled={isTrashView}
           className={clsx(
             "ui-button-secondary h-[42px] w-full px-6 sm:w-auto",
-            isTrashView || isSharedView
-              ? ""
-              : "text-indigo-700 dark:text-indigo-300",
+            isTrashView ? "" : "text-indigo-700 dark:text-indigo-300",
           )}
         >
           <Upload size={18} strokeWidth={2.5} /> Import drawings
         </button>
         <NewDrawingControl
-          disabled={isTrashView || isSharedView}
+          disabled={isTrashView}
           onCreate={onCreateDrawing}
           canCreate={() => {
             if (

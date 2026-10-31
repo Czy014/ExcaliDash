@@ -8,7 +8,7 @@ import {
   SettingsSectionHeader,
   settingsButtonClass,
   settingsSelectClass,
-} from "../settings/SettingsRow";
+} from "./SettingsRow";
 
 const API_KEY_SCOPE_LABELS: Record<string, string> = {
   "drawings:read": "Read drawings",
@@ -174,7 +174,7 @@ export const ApiKeysCard: React.FC<Props> = ({ disabled, onSuccess }) => {
             API key management is unavailable until you reset your password.
           </p>
           <p className="text-xs text-amber-800 dark:text-amber-200 font-medium mt-0.5">
-            Change your password in Profile, then return here to create and
+            Change your password in Settings, then return here to create and
             manage API keys.
           </p>
         </div>

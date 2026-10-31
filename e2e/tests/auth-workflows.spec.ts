@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import type { APIRequestContext, Page } from "@playwright/test";
-import { owner, viewer } from "../fixtures/auth";
-import { openAccountMenu } from "./helpers/sidebar";
+import { owner, viewer, credentialUser } from "../fixtures/auth";
+import { openWorkspaceMenu } from "./helpers/sidebar";
 import {
   API_URL,
   createDrawing,
@@ -50,7 +50,7 @@ test("login rejects a bad password, survives reload, and logout blocks private a
     await page.reload();
     await expect(page.getByPlaceholder("Search drawings...")).toBeVisible();
     expect((await page.request.get(`${API_URL}/auth/me`)).status()).toBe(200);
-    await openAccountMenu(page);
+    await openWorkspaceMenu(page);
     await page.getByRole("button", { name: "Logout", exact: true }).click();
     await expect(
       page.getByRole("button", { name: "Sign in", exact: true }),
@@ -215,7 +215,7 @@ test("a rejected stale save leaves the accepted scene and version intact", async
   }
 });
 
-test("compact account menu hides email and persists its display preference", async ({
+test("compact workspace menu hides identity and persists its display preference", async ({
   page,
 }) => {
   await signIn(page);
@@ -227,16 +227,28 @@ test("compact account menu hides email and persists its display preference", asy
     if ((await toggle.getAttribute("aria-checked")) !== "true")
       await toggle.click();
     await expect(
-      page.getByRole("button", { name: "Account menu", exact: true }),
+      page.getByRole("button", { name: "Workspace menu", exact: true }),
     ).toBeVisible();
     const sidebar = page.locator("aside");
     await expect(sidebar.getByText(owner.email, { exact: true })).toHaveCount(
       0,
     );
+    await expect(sidebar.getByText("E2E Admin", { exact: true })).toHaveCount(
+      0,
+    );
+    await expect(
+      page.getByRole("region", { name: "Account security", exact: true }),
+    ).toBeVisible();
+    await expect(
+      sidebar.getByRole("img", { name: /profile picture/ }),
+    ).toHaveCount(0);
+    await expect(
+      sidebar.getByText(/^(Profile|Shared with me|Beta)$/),
+    ).toHaveCount(0);
     await expect(
       sidebar.getByRole("button", { name: "Trash", exact: true }),
     ).toBeHidden();
-    await openAccountMenu(page);
+    await openWorkspaceMenu(page);
     await expect(
       sidebar.getByRole("button", { name: "Trash", exact: true }),
     ).toBeVisible();
@@ -259,6 +271,22 @@ test("compact account menu hides email and persists its display preference", asy
     await expect(sidebar.getByText(owner.email, { exact: true })).toHaveCount(
       0,
     );
+    await expect(sidebar.getByText("E2E Admin", { exact: true })).toHaveCount(
+      0,
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.reload();
+    await page.getByRole("button", { name: "Open menu", exact: true }).click();
+    await expect(sidebar.getByText("E2E Admin", { exact: true })).toHaveCount(
+      0,
+    );
+    await expect(
+      sidebar.getByRole("img", { name: /profile picture/ }),
+    ).toHaveCount(0);
+    await expect(page.getByText("Beta", { exact: true })).toHaveCount(0);
+    await expect(sidebar.getByText(/^(Profile|Shared with me)$/)).toHaveCount(
+      0,
+    );
   } finally {
     const restored = await page.request.put(`${API_URL}/auth/preferences`, {
       headers: await getCsrfHeaders(page.request),
@@ -266,6 +294,100 @@ test("compact account menu hides email and persists its display preference", asy
     });
     expect(restored.ok()).toBe(true);
   }
+});
+
+test("account security in Settings preserves verified email and password changes", async ({
+  page,
+}) => {
+  await signIn(page, credentialUser);
+  await page.goto("/settings");
+  const security = page.getByRole("region", {
+    name: "Account security",
+    exact: true,
+  });
+  await expect(security).toBeVisible();
+  await expect(security.getByLabel("Display name")).toHaveCount(0);
+  await security.getByRole("button", { name: "Change", exact: true }).click();
+  const email = `changed-${Date.now()}@example.test`;
+  await security.getByLabel("New email", { exact: true }).fill(email);
+  await security
+    .getByLabel("Current password", { exact: true })
+    .fill("wrong-password");
+  const rejectedEmail = page.waitForResponse((r) =>
+    r.url().endsWith("/auth/email"),
+  );
+  await security
+    .getByRole("button", { name: "Save email", exact: true })
+    .click();
+  expect((await rejectedEmail).ok()).toBe(false);
+  await expect(security.getByRole("alert")).toBeVisible();
+  expect(
+    (await (await page.request.get(`${API_URL}/auth/me`)).json()).user.email,
+  ).toBe(credentialUser.email);
+
+  await security
+    .getByLabel("Current password", { exact: true })
+    .fill(credentialUser.password);
+  await security
+    .getByRole("button", { name: "Save email", exact: true })
+    .click();
+  await expect(
+    security.getByText("Email updated successfully", { exact: true }),
+  ).toBeVisible();
+  await openWorkspaceMenu(page);
+  const emailLogout = page.waitForResponse((r) =>
+    r.url().endsWith("/auth/logout"),
+  );
+  await page.getByRole("button", { name: "Logout", exact: true }).click();
+  expect((await emailLogout).ok()).toBe(true);
+  await expect(
+    page.getByRole("button", { name: "Sign in", exact: true }),
+  ).toBeVisible();
+  await signIn(page, { ...credentialUser, email });
+  await page.goto("/settings");
+
+  const password = "New-Credential-Password-123!";
+  const changePassword = security.getByRole("region", {
+    name: "Change password",
+    exact: true,
+  });
+  await changePassword
+    .getByRole("button", { name: "Change password", exact: true })
+    .click();
+  await changePassword
+    .getByLabel("Current Password", { exact: true })
+    .fill("wrong-password");
+  await changePassword
+    .getByLabel("New Password", { exact: true })
+    .fill(password);
+  await changePassword
+    .getByLabel("Confirm New Password", { exact: true })
+    .fill(password);
+  const rejectedPassword = page.waitForResponse((r) =>
+    r.url().endsWith("/auth/change-password"),
+  );
+  await changePassword
+    .getByRole("button", { name: "Change Password", exact: true })
+    .click();
+  expect((await rejectedPassword).ok()).toBe(false);
+  await expect(security.getByRole("alert")).toBeVisible();
+  await changePassword
+    .getByLabel("Current Password", { exact: true })
+    .fill(credentialUser.password);
+  const passwordLogout = page.waitForResponse((r) =>
+    r.url().endsWith("/auth/logout"),
+  );
+  await changePassword
+    .getByRole("button", { name: "Change Password", exact: true })
+    .click();
+  expect((await passwordLogout).ok()).toBe(true);
+  await expect(
+    page.getByRole("button", { name: "Sign in", exact: true }),
+  ).toBeVisible();
+  await signIn(page, { ...credentialUser, email, password });
+  expect(
+    (await (await page.request.get(`${API_URL}/auth/me`)).json()).user.email,
+  ).toBe(email);
 });
 
 test("opening an image through a view-only link never attempts to save or upload", async ({

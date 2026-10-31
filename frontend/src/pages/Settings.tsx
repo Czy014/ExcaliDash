@@ -9,7 +9,8 @@ import { usePreference } from "../context/PreferencesContext";
 import { SettingsMainGrid } from "./settings/SettingsMainGrid";
 import { AdvancedSettings } from "./settings/AdvancedSettings";
 import { SettingsConfirmModals } from "./settings/SettingsConfirmModals";
-import { ApiKeysCard } from "./profile/ApiKeysCard";
+import { ApiKeysCard } from "./settings/ApiKeysCard";
+import { AccountSettings } from "./settings/AccountSettings";
 import { Toaster } from "sonner";
 import { displayFontFamily } from "../utils/displayFont";
 import {
@@ -350,6 +351,7 @@ export const Settings: React.FC = () => {
           </div>
         )}{" "}
         <div className="space-y-10">
+          <AccountSettings />
           <ApiKeysCard
             disabled={mustResetPassword}
             onSuccess={setSettingsSuccess}

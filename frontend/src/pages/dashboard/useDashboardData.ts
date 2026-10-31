@@ -37,20 +37,16 @@ export const useDashboardData = ({
     const requestVersion = ++listRequestVersionRef.current;
     setIsLoading(true);
     try {
-      const isSharedView = selectedCollectionId === "shared";
-      const drawingsPromise = isSharedView
-        ? api.getSharedDrawings(debouncedSearch, {
-            limit: pageSize,
-            offset: 0,
-            sortField,
-            sortDirection,
-          })
-        : api.getDrawings(debouncedSearch, selectedCollectionId, {
-            limit: pageSize,
-            offset: 0,
-            sortField,
-            sortDirection,
-          });
+      const drawingsPromise = api.getDrawings(
+        debouncedSearch,
+        selectedCollectionId,
+        {
+          limit: pageSize,
+          offset: 0,
+          sortField,
+          sortDirection,
+        },
+      );
 
       const [drawingsResult, collectionsResult] = await Promise.allSettled([
         drawingsPromise,
@@ -94,20 +90,16 @@ export const useDashboardData = ({
     const requestVersion = listRequestVersionRef.current;
     setIsFetchingMore(true);
     try {
-      const isSharedView = selectedCollectionId === "shared";
-      const drawingsRes = await (isSharedView
-        ? api.getSharedDrawings(debouncedSearch, {
-            limit: pageSize,
-            offset: nextOffsetRef.current,
-            sortField,
-            sortDirection,
-          })
-        : api.getDrawings(debouncedSearch, selectedCollectionId, {
-            limit: pageSize,
-            offset: nextOffsetRef.current,
-            sortField,
-            sortDirection,
-          }));
+      const drawingsRes = await api.getDrawings(
+        debouncedSearch,
+        selectedCollectionId,
+        {
+          limit: pageSize,
+          offset: nextOffsetRef.current,
+          sortField,
+          sortDirection,
+        },
+      );
       if (!isLatestRequest(requestVersion, listRequestVersionRef.current))
         return;
       setDrawings((prev) => mergeUniqueDrawings(prev, drawingsRes.drawings));

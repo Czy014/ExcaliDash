@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { openAccountMenu } from "./helpers/sidebar";
+import { openWorkspaceMenu } from "./helpers/sidebar";
 import {
   API_URL,
   createDrawing,
@@ -368,7 +368,7 @@ test.describe("Drawing Deletion", () => {
 
     await expect(card).not.toBeVisible();
 
-    await openAccountMenu(page);
+    await openWorkspaceMenu(page);
     await page.getByRole("button", { name: /^Trash$/ }).click();
     await page.waitForLoadState("networkidle");
 
@@ -386,7 +386,7 @@ test.describe("Drawing Deletion", () => {
     createdDrawingIds.push(drawing.id);
 
     await page.goto("/?view=trash");
-    await openAccountMenu(page);
+    await openWorkspaceMenu(page);
     await page.getByRole("button", { name: /^Trash$/ }).click();
     await page.waitForLoadState("networkidle");
 

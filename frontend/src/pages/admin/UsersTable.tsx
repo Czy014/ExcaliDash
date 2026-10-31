@@ -144,7 +144,7 @@ export const UsersTable: React.FC<UsersTableProps> = ({
                       className="ui-button-secondary px-2.5 py-1.5 text-xs"
                       title={
                         user.id === currentUserId
-                          ? "Use Profile → Change Password for your own account"
+                          ? "Use Settings → Change password for your own account"
                           : "Generate a temporary password"
                       }
                     >

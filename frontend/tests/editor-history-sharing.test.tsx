@@ -67,7 +67,6 @@ vi.mock("../src/components/LanguageSelector", () => ({
 vi.mock("../src/components/GridStepSelector", () => ({
   GridStepSelector: () => null,
 }));
-vi.mock("../src/components/UserAvatar", () => ({ UserAvatar: () => null }));
 vi.mock("sonner", () => ({
   Toaster: () => null,
   toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() },

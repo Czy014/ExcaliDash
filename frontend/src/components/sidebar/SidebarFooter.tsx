@@ -3,20 +3,17 @@ import {
   Shield,
   Settings as SettingsIcon,
   Trash2,
-  User,
+  SlidersHorizontal,
   LogOut,
   ChevronUp,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import clsx from "clsx";
-import { UserAvatar } from "../UserAvatar";
 import { useLocale } from "../../context/useLocale";
 import { usePreference } from "../../context/PreferencesContext";
 
 type UserLike =
   | {
-      name: string;
-      email: string;
       role?: string;
     }
   | null
@@ -53,7 +50,6 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = ({
   const footerRef = useRef<HTMLDivElement>(null);
   const actionsId = useId();
   const isAdmin = user?.role === "ADMIN";
-  const name = user?.name || "Workspace";
   const selectPage = (path: string) => {
     setIsOpen(false);
     navigate(path);
@@ -83,15 +79,17 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = ({
       {compact && (
         <button
           type="button"
-          aria-label="Account menu"
+          aria-label={t("sidebar.workspaceMenu")}
           aria-expanded={isOpen}
           aria-controls={actionsId}
           onClick={() => setIsOpen((open) => !open)}
           onDragEnter={() => setIsOpen(true)}
           className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 dark:text-neutral-200 dark:hover:bg-neutral-800"
         >
-          <UserAvatar name={name} size="sm" />
-          <span className="min-w-0 flex-1 truncate text-left">{name}</span>
+          <SlidersHorizontal size={18} />
+          <span className="min-w-0 flex-1 truncate text-left">
+            {t("sidebar.workspace")}
+          </span>
           <ChevronUp
             size={16}
             className={clsx(
@@ -134,21 +132,6 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = ({
           <Trash2 size={18} />
           <span className="min-w-0 flex-1 text-left">{t("sidebar.trash")}</span>
         </button>
-
-        {authEnabled !== null && (
-          <button
-            onClick={() => selectPage("/profile")}
-            className={footerButtonClass(
-              selectedCollectionId === "PROFILE",
-              compact,
-            )}
-          >
-            <User size={18} />
-            <span className="min-w-0 flex-1 text-left">
-              {t("sidebar.profile")}
-            </span>
-          </button>
-        )}
 
         {authEnabled !== null && (isAdmin || authEnabled === false) && (
           <button
@@ -200,12 +183,6 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = ({
           </div>
         )}
       </div>
-      {!compact && (
-        <div className="flex items-center gap-3 px-2 py-2 text-sm font-semibold text-slate-700 dark:text-neutral-200">
-          <UserAvatar name={name} size="sm" />
-          <span className="min-w-0 truncate">{name}</span>
-        </div>
-      )}
     </div>
   );
 };

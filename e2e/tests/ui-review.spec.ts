@@ -132,13 +132,8 @@ test.describe("UI review screenshots", () => {
         .locator("xpath=../..")
         .screenshot({ path: path.join(outputDir, "05-ai-settings-card.png") });
 
-      await page.goto("/profile");
-      await expect(
-        page.getByRole("heading", { name: "Profile" }),
-      ).toBeVisible();
-      await page.screenshot({
-        path: path.join(outputDir, "06-profile.png"),
-        fullPage: true,
+      await page.getByRole("region", { name: "Account security" }).screenshot({
+        path: path.join(outputDir, "06-account-security.png"),
       });
 
       await page.goto("/admin");

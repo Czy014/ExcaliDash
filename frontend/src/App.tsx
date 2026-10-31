@@ -22,9 +22,6 @@ const Editor = lazy(() =>
 const Settings = lazy(() =>
   import("./pages/Settings").then((m) => ({ default: m.Settings })),
 );
-const Profile = lazy(() =>
-  import("./pages/Profile").then((m) => ({ default: m.Profile })),
-);
 const Admin = lazy(() =>
   import("./pages/Admin").then((m) => ({ default: m.Admin })),
 );
@@ -98,14 +95,6 @@ function App() {
                       element={
                         <ProtectedRoute>
                           <Settings />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/profile"
-                      element={
-                        <ProtectedRoute>
-                          <Profile />
                         </ProtectedRoute>
                       }
                     />

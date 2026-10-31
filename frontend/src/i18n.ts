@@ -2,7 +2,6 @@ const messages = {
   en: {
     "sidebar.library": "Library",
     "sidebar.allDrawings": "All Drawings",
-    "sidebar.sharedWithMe": "Shared with me",
     "sidebar.unorganized": "Unorganized",
     "sidebar.collections": "Collections",
     "sidebar.newCollection": "New Collection",
@@ -15,7 +14,8 @@ const messages = {
     "sidebar.deleteCollectionMessage":
       "Are you sure you want to delete this collection? All drawings inside will be moved to Unorganized.",
     "sidebar.trash": "Trash",
-    "sidebar.profile": "Profile",
+    "sidebar.workspace": "Workspace",
+    "sidebar.workspaceMenu": "Workspace menu",
     "sidebar.admin": "Admin",
     "sidebar.settings": "Settings",
     "sidebar.logout": "Logout",
@@ -24,7 +24,6 @@ const messages = {
   "zh-CN": {
     "sidebar.library": "资料库",
     "sidebar.allDrawings": "全部绘图",
-    "sidebar.sharedWithMe": "与我共享",
     "sidebar.unorganized": "未整理",
     "sidebar.collections": "集合",
     "sidebar.newCollection": "新建集合",
@@ -37,7 +36,8 @@ const messages = {
     "sidebar.deleteCollectionMessage":
       "确定要删除此集合吗？其中的所有绘图都将移至未整理。",
     "sidebar.trash": "回收站",
-    "sidebar.profile": "个人资料",
+    "sidebar.workspace": "工作区",
+    "sidebar.workspaceMenu": "工作区菜单",
     "sidebar.admin": "管理",
     "sidebar.settings": "设置",
     "sidebar.logout": "退出登录",

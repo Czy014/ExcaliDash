@@ -177,21 +177,6 @@ export async function getDrawings(
   };
 }
 
-export async function getSharedDrawings(
-  search?: string,
-  options?: Omit<DrawingQueryOptions, "includeData">,
-): Promise<PaginatedDrawings<DrawingSummary>> {
-  const params = buildDrawingParams(search, undefined, options);
-  const response = await api.get<PaginatedDrawings<DrawingSummary>>(
-    "/drawings/shared",
-    { params },
-  );
-  return {
-    ...response.data,
-    drawings: response.data.drawings.map(deserializeDrawingSummary),
-  };
-}
-
 export const getDrawing = async (id: string) => {
   const response = await api.get<Drawing>(`/drawings/${id}`);
   return deserializeDrawing(response.data);
@@ -270,19 +255,6 @@ export const revokeDrawingPermission = async (
 ): Promise<{ success: true }> => {
   const response = await api.delete<{ success: true }>(
     `/drawings/${drawingId}/permissions/${permissionId}`,
-  );
-  return response.data;
-};
-
-// Recipient-scoped: hide/unhide a drawing shared with the current user from
-// their own "Shared with me" list. Does not affect the owner or other grantees.
-export const setSharedDrawingHidden = async (
-  drawingId: string,
-  hidden: boolean,
-): Promise<{ success: true; hidden: boolean }> => {
-  const response = await api.patch<{ success: true; hidden: boolean }>(
-    `/drawings/${drawingId}/shared-visibility`,
-    { hidden },
   );
   return response.data;
 };

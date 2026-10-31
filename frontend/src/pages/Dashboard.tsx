@@ -148,7 +148,6 @@ export const Dashboard: React.FC = () => {
   const viewTitle = React.useMemo(() => {
     if (selectedCollectionId === undefined) return "All Drawings";
     if (selectedCollectionId === null) return "Unorganized";
-    if (selectedCollectionId === "shared") return "Shared with me";
     if (selectedCollectionId === "trash") return "Trash";
     const collection = collections.find((c) => c.id === selectedCollectionId);
     return collection ? collection.name : "Collection";
@@ -165,7 +164,7 @@ export const Dashboard: React.FC = () => {
       onCreateCollection={collectionActions.handleCreateCollection}
       onEditCollection={collectionActions.handleEditCollection}
       onDeleteCollection={collectionActions.handleDeleteCollection}
-      onDrop={actions.isSharedView ? undefined : actions.handleDrop}
+      onDrop={actions.handleDrop}
     >
       {" "}
       <DragPreview drawings={actions.dragPreviewDrawings} />{" "}
@@ -202,7 +201,6 @@ export const Dashboard: React.FC = () => {
         allSelected={selection.allSelected}
         hasSelection={selection.hasSelection}
         isTrashView={actions.isTrashView}
-        isSharedView={actions.isSharedView}
         isSharedCollection={actions.isSharedCollection}
         currentCollection={actions.currentCollection}
         showBulkMoveMenu={showBulkMoveMenu}
@@ -238,7 +236,6 @@ export const Dashboard: React.FC = () => {
           dragCounter.current = 0;
           const target =
             selectedCollectionId === undefined ? null : selectedCollectionId;
-          if (actions.isSharedView) return;
           actions.handleDrop(e, target);
         }}
       >
@@ -252,14 +249,12 @@ export const Dashboard: React.FC = () => {
           isLoading={isLoading}
           isDraggingFile={isDraggingFile}
           isTrashView={actions.isTrashView}
-          isSharedView={actions.isSharedView}
           isSharedCollection={actions.isSharedCollection}
           currentCollection={actions.currentCollection}
           onClearSearch={() => setSearch("")}
           onToggleSelection={selection.handleToggleSelection}
           onRename={actions.handleRenameDrawing}
           onDelete={actions.handleDeleteDrawing}
-          onHide={actions.handleHideSharedDrawing}
           onDuplicate={actions.handleDuplicateDrawing}
           onMoveToCollection={actions.handleMoveToCollection}
           onOpenDrawing={(id) => navigate(`/editor/${id}`)}

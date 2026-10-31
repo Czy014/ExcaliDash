@@ -1,12 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  LayoutGrid,
-  Folder,
-  Plus,
-  Archive,
-  FolderOpen,
-  Shield,
-} from "lucide-react";
+import { LayoutGrid, Folder, Plus, Archive, FolderOpen } from "lucide-react";
 import type { Collection } from "../types";
 import clsx from "clsx";
 import { ConfirmModal } from "./ConfirmModal";
@@ -96,9 +89,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <Logo className="w-10 h-10" />
             <span className="mt-1">ExcaliDash</span>
-            <span className="mt-2 font-sans text-xs font-bold text-red-500">
-              Beta
-            </span>
           </h1>
         </div>
         <nav
@@ -132,13 +122,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </span>
               </button>
             </div>
-            <SidebarItem
-              id={"shared"}
-              icon={<Shield size={18} />}
-              label={t("sidebar.sharedWithMe")}
-              isActive={selectedCollectionId === "shared"}
-              onClick={() => onSelectCollection("shared")}
-            />
             <SidebarItem
               id={null}
               icon={<Archive size={18} />}

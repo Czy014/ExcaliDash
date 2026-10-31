@@ -1,7 +1,7 @@
 import type { FullConfig } from "@playwright/test";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { owner, viewer } from "./fixtures/auth";
+import { owner, viewer, credentialUser } from "./fixtures/auth";
 
 const API_URL = process.env.API_URL || "http://localhost:8000";
 const TEST_USER_ID = owner.id;
@@ -42,19 +42,21 @@ export default async function globalSetup(_config: FullConfig) {
 
   const prisma = new PrismaClient();
   try {
-    const viewerData = {
-      email: viewer.email,
-      passwordHash: await bcrypt.hash(viewer.password, 10),
-      name: "E2E Viewer",
-      role: "USER",
-      isActive: true,
-      mustResetPassword: false,
-    };
-    await prisma.user.upsert({
-      where: { id: viewer.id },
-      update: viewerData,
-      create: { id: viewer.id, ...viewerData },
-    });
+    for (const identity of [viewer, credentialUser]) {
+      const userData = {
+        email: identity.email,
+        passwordHash: await bcrypt.hash(identity.password, 10),
+        name: identity.name,
+        role: "USER",
+        isActive: true,
+        mustResetPassword: false,
+      };
+      await prisma.user.upsert({
+        where: { id: identity.id },
+        update: userData,
+        create: { id: identity.id, ...userData },
+      });
+    }
     const passwordHash = await bcrypt.hash(TEST_PASSWORD, 10);
     await prisma.systemConfig.upsert({
       where: { id: "default" },

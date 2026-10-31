@@ -143,9 +143,6 @@ export const Layout: React.FC<LayoutProps> = ({
                 >
                   ExcaliDash
                 </span>
-                <span className="mt-2 text-[10px] font-bold text-red-500">
-                  Beta
-                </span>
               </div>
             </div>
 

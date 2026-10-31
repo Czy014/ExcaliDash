@@ -48,7 +48,6 @@ export const useDashboardDrawingActions = ({
   const [potentialDragId, setPotentialDragId] = useState<string | null>(null);
 
   const isTrashView = selectedCollectionId === "trash";
-  const isSharedView = selectedCollectionId === "shared";
   const currentCollection = collections.find(
     (collection) => collection.id === selectedCollectionId,
   );
@@ -62,7 +61,7 @@ export const useDashboardDrawingActions = ({
     showTemporaryViewerError(message, setViewerActionError);
 
   const handleCreateDrawing = async () => {
-    if (isTrashView || isSharedView) return;
+    if (isTrashView) return;
     if (isSharedCollection && currentCollection?.sharedRole !== "edit") {
       handleViewerActionError("Viewers can't create new drawings");
       return;
@@ -81,7 +80,7 @@ export const useDashboardDrawingActions = ({
   };
 
   const handleImportDrawings = async (files: FileList | null) => {
-    if (!files || isTrashView || isSharedView) return;
+    if (!files || isTrashView) return;
     if (isSharedCollection && currentCollection?.sharedRole !== "edit") {
       handleViewerActionError("Viewers can't import drawings");
       return;
@@ -221,17 +220,6 @@ export const useDashboardDrawingActions = ({
     }
   };
 
-  const handleHideSharedDrawing = async (id: string) => {
-    // Optimistically drop the shared drawing from the recipient's list.
-    removeDrawingFromList(id);
-    try {
-      await api.setSharedDrawingHidden(id, true);
-    } catch (err) {
-      console.error("Failed to hide shared drawing", err);
-      refreshData();
-    }
-  };
-
   const handleDuplicateDrawing = async (id: string) => {
     try {
       await api.duplicateDrawing(id);
@@ -280,7 +268,6 @@ export const useDashboardDrawingActions = ({
   ) => {
     event.preventDefault();
     event.stopPropagation();
-    if (isSharedView) return;
     if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
       const files = Array.from(event.dataTransfer.files);
       const libFiles = files.filter((file) =>
@@ -365,7 +352,6 @@ export const useDashboardDrawingActions = ({
     showImportError,
     viewerActionError,
     isTrashView,
-    isSharedView,
     currentCollection,
     isSharedCollection,
     dragPreviewDrawings,
@@ -377,7 +363,6 @@ export const useDashboardDrawingActions = ({
     handleImportDrawings,
     handleRenameDrawing,
     handleDeleteDrawing,
-    handleHideSharedDrawing,
     executePermanentDelete,
     handleBulkDeleteClick,
     executeBulkPermanentDelete,
