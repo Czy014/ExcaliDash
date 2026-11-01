@@ -64,7 +64,7 @@ repository root unless they start with `cd`.
 
 - [x] 4.1 Record the results below, synchronize the `base-path` specification
       and archive this change only after section 3 passes.
-- [ ] 4.2 Commit and push `feat/native-base-path`. Merge into `main` only when
+- [x] 4.2 Commit and push `feat/native-base-path`. Merge into `main` only when
       explicitly instructed, then record the commit for Homebase.
 
 ## Validation
@@ -92,6 +92,10 @@ repository root unless they start with `cd`.
 - Archived as `2026-11-02-support-native-base-path`; all three added
   requirements match the synchronized `base-path` specification. Strict
   validation after archive passed all 5 current specifications.
+- Implementation and archive commit `377b8b1` was pushed to
+  `origin/feat/native-base-path`. Task 4.2's authorized branch publication is
+  complete. No main merge is authorized yet; its eventual merge commit must be
+  recorded for Homebase before integration or deployment.
 
 ### Builds
 
