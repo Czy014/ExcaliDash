@@ -8,7 +8,6 @@ export interface EnvVarSpec {
     | "Security"
     | "S3 storage"
     | "Backups"
-    | "Update check"
     | "AI"
     | "Frontend (build-time)";
   kind: EnvKind;

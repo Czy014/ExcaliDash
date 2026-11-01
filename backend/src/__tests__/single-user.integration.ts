@@ -183,6 +183,10 @@ describe("single-user workspace", () => {
     await agent.get("/collections/old/shares").expect(404);
   });
 
+  it("does not expose the retired release update route", async () => {
+    await agent.get("/system/update").expect(404);
+  });
+
   it("still requires a bound CSRF token and an allowed request origin", async () => {
     await request(app).post("/drawings").send({ name: "Blocked" }).expect(403);
     await request(app)

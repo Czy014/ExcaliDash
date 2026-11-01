@@ -14,12 +14,7 @@ import {
   readRaw,
   readString,
 } from "./config/env";
-import {
-  type UpdateCheckConfig,
-  parseDrawingsCacheTtlMs,
-  parseTrustProxy,
-  resolveUpdateCheckConfig,
-} from "./config/derived";
+import { parseDrawingsCacheTtlMs, parseTrustProxy } from "./config/derived";
 dotenv.config();
 
 interface S3Config {
@@ -65,7 +60,6 @@ interface Config {
   enforceHttpsRedirect: boolean;
   backups: BackupConfig;
   s3: S3Config;
-  updateCheck: UpdateCheckConfig;
 }
 
 const parseFrontendUrl = (raw: string | undefined): string | undefined => {
@@ -168,6 +162,5 @@ export const config: Config = {
   enforceHttpsRedirect: readBoolean("ENFORCE_HTTPS_REDIRECT", true),
   backups: resolveBackupConfig(),
   s3: resolveS3Config(),
-  updateCheck: resolveUpdateCheckConfig(),
 };
 console.log("Configuration validated successfully");

@@ -27,7 +27,6 @@ import { errorHandler, asyncHandler } from "./middleware/errorHandler";
 import { logAuditEvent } from "./utils/audit";
 import { registerDashboardRoutes } from "./routes/dashboard";
 import { registerImportExportRoutes } from "./routes/importExport";
-import { registerSystemRoutes } from "./routes/system";
 import { registerFileRoutes } from "./routes/files";
 import { registerStorageRoutes } from "./routes/storage";
 import { prisma, configureSqlite } from "./db/prisma";
@@ -487,7 +486,6 @@ app.get("/health", async (_req, res) => {
     res.status(503).json({ status: "error", database: "unavailable" });
   }
 });
-registerSystemRoutes(app, { asyncHandler, getBackendVersion });
 app.use(createWorkspaceMiddleware(prisma));
 registerDashboardRoutes(app, {
   prisma,

@@ -46,6 +46,12 @@ test.describe("Export Functionality", () => {
     });
     createdDrawingIds.push(drawing.id);
 
+    const updateRequests: string[] = [];
+    page.on("request", (request) => {
+      const pathname = new URL(request.url()).pathname;
+      if (pathname.endsWith("/system/update")) updateRequests.push(pathname);
+    });
+
     await page.goto("/settings");
     await page.waitForLoadState("networkidle");
 
@@ -54,6 +60,19 @@ test.describe("Export Functionality", () => {
     ).toBeVisible();
     await expect(page.getByRole("button", { name: /^Export$/ })).toBeVisible();
     await expect(page.getByText("Export backup")).toBeVisible();
+    await expect(page.getByText("Updates", { exact: true })).toHaveCount(0);
+
+    await expect(
+      page.getByRole("switch", {
+        name: "Toggle editor header auto-hide default",
+      }),
+    ).toBeVisible();
+
+    const advancedDetails = page.locator("details", { hasText: "Advanced" });
+    await expect(advancedDetails).toHaveCount(1);
+    await advancedDetails.locator("summary").click();
+    await expect(page.getByText("Version", { exact: true })).toBeVisible();
+    expect(updateRequests).toEqual([]);
   });
 
   test("should export .excalidash via API", async ({ request }) => {

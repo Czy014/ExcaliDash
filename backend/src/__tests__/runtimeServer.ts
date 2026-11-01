@@ -28,7 +28,6 @@ export async function startRuntimeServer(
         LISTEN_HOST: "127.0.0.1",
         FRONTEND_URL: "https://first.example.test,https://second.example.test",
         CSRF_SECRET: randomBytes(32).toString("hex"),
-        UPDATE_CHECK_OUTBOUND: "false",
         ...overrides,
       },
       stdio: ["ignore", "pipe", "pipe"],

@@ -71,18 +71,6 @@ export const Settings: React.FC = () => {
   }>({ isOpen: false, message: "" });
   const appVersion = import.meta.env.VITE_APP_VERSION || "Unknown version";
   const buildLabel = import.meta.env.VITE_APP_BUILD_LABEL;
-  const UPDATE_CHANNEL_KEY = "excalidash-update-channel";
-  const UPDATE_INFO_KEY = "excalidash-update-info";
-  const [updateChannel, setUpdateChannel] = useState<api.UpdateChannel>(() => {
-    const raw =
-      typeof window === "undefined"
-        ? null
-        : (window.localStorage?.getItem?.(UPDATE_CHANNEL_KEY) ?? null);
-    return raw === "prerelease" ? "prerelease" : "stable";
-  });
-  const [updateInfo, setUpdateInfo] = useState<api.UpdateInfo | null>(null);
-  const [updateLoading, setUpdateLoading] = useState(false);
-  const [updateError, setUpdateError] = useState<string | null>(null);
   useEffect(() => {
     const fetchCollections = async () => {
       try {
@@ -117,34 +105,6 @@ export const Settings: React.FC = () => {
     resetImageCompressionMemo();
     setImageCompressionThresholdMb(next);
   };
-  const checkForUpdates = async (channel: api.UpdateChannel) => {
-    setUpdateLoading(true);
-    setUpdateError(null);
-    try {
-      const info = await api.getUpdateInfo(channel);
-      setUpdateInfo(info);
-      try {
-        window.localStorage?.setItem?.(
-          `${UPDATE_INFO_KEY}:${channel}`,
-          JSON.stringify(info),
-        );
-      } catch {
-        // Ignore unavailable storage in private/embedded contexts.
-      }
-    } catch (err: unknown) {
-      let message = "Failed to check for updates";
-      if (api.isAxiosError(err)) {
-        message =
-          err.response?.data?.message || err.response?.data?.error || message;
-      }
-      setUpdateError(message);
-    } finally {
-      setUpdateLoading(false);
-    }
-  };
-  useEffect(() => {
-    void checkForUpdates(updateChannel);
-  }, [updateChannel]);
   const exportBackup = async () => {
     try {
       const response = await api.api.get("/export/excalidash", {
@@ -302,20 +262,6 @@ export const Settings: React.FC = () => {
             onEditorAutoHideChange={setEditorAutoHide}
             compactSidebar={compactSidebar}
             onCompactSidebarChange={setCompactSidebar}
-            updateChannel={updateChannel}
-            updateInfo={updateInfo}
-            updateLoading={updateLoading}
-            updateError={updateError}
-            onUpdateChannelChange={(next) => {
-              try {
-                window.localStorage?.setItem?.(UPDATE_CHANNEL_KEY, next);
-              } catch {
-                // Ignore unavailable storage in private/embedded contexts.
-              }
-              setUpdateChannel(next);
-              void checkForUpdates(next);
-            }}
-            onCheckForUpdates={() => void checkForUpdates(updateChannel)}
           />
         </div>{" "}
         <AdvancedSettings

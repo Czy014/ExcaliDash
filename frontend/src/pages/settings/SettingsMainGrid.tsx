@@ -8,9 +8,7 @@ import {
   Zap,
   ZapOff,
 } from "lucide-react";
-import type * as api from "../../api";
 import { PlayfulSwitch } from "../../components/PlayfulSwitch";
-import { UpdateSettingsCard } from "./UpdateSettingsCard";
 import {
   SettingsCard,
   SettingsRow,
@@ -34,12 +32,6 @@ type SettingsMainGridProps = {
   onEditorAutoHideChange: (enabled: boolean) => void;
   compactSidebar: boolean;
   onCompactSidebarChange: (enabled: boolean) => void;
-  updateChannel: api.UpdateChannel;
-  updateInfo: api.UpdateInfo | null;
-  updateLoading: boolean;
-  updateError: string | null;
-  onUpdateChannelChange: (channel: api.UpdateChannel) => void;
-  onCheckForUpdates: () => void;
 };
 
 export const SettingsMainGrid = ({
@@ -54,12 +46,6 @@ export const SettingsMainGrid = ({
   onEditorAutoHideChange,
   compactSidebar,
   onCompactSidebarChange,
-  updateChannel,
-  updateInfo,
-  updateLoading,
-  updateError,
-  onUpdateChannelChange,
-  onCheckForUpdates,
 }: SettingsMainGridProps) => {
   return (
     <SettingsCard>
@@ -158,15 +144,6 @@ export const SettingsMainGrid = ({
           Export
         </button>
       </SettingsRow>
-
-      <UpdateSettingsCard
-        updateChannel={updateChannel}
-        updateInfo={updateInfo}
-        updateLoading={updateLoading}
-        updateError={updateError}
-        onChannelChange={onUpdateChannelChange}
-        onCheckForUpdates={onCheckForUpdates}
-      />
     </SettingsCard>
   );
 };

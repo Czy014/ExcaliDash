@@ -16,7 +16,6 @@ const env = {
   PORT: "8107",
   FRONTEND_URL: "http://127.0.0.1:6777",
   CSRF_SECRET: randomBytes(32).toString("hex"),
-  UPDATE_CHECK_OUTBOUND: "false",
   RATE_LIMIT_MAX_REQUESTS: "100000",
   CSRF_MAX_REQUESTS: "100000",
   VITE_DEV_BACKEND_URL: "http://127.0.0.1:8107",

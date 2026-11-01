@@ -4,11 +4,6 @@
  */
 import { readRaw } from "./env";
 
-export interface UpdateCheckConfig {
-  outbound: boolean;
-  githubToken: string | null;
-}
-
 /** Parse TRUST_PROXY exactly as backend/src/index.ts does today. */
 export const parseTrustProxy = (): boolean | number => {
   const raw = (readRaw("TRUST_PROXY") ?? "false").trim();
@@ -22,17 +17,4 @@ export const parseDrawingsCacheTtlMs = (): number => {
   const parsed = Number(readRaw("DRAWINGS_CACHE_TTL_MS"));
   if (!Number.isFinite(parsed) || parsed <= 0) return 5_000;
   return parsed;
-};
-
-export const resolveUpdateCheckConfig = (): UpdateCheckConfig => {
-  const outboundRaw = (readRaw("UPDATE_CHECK_OUTBOUND") ?? "true")
-    .trim()
-    .toLowerCase();
-  const outbound =
-    outboundRaw === "true" || outboundRaw === "1" || outboundRaw === "yes";
-  const tokenRaw = (readRaw("UPDATE_CHECK_GITHUB_TOKEN") ?? "").trim();
-  return {
-    outbound,
-    githubToken: tokenRaw.length > 0 ? tokenRaw : null,
-  };
 };

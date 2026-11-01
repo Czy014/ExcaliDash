@@ -17,7 +17,6 @@ x-backend-common: &backend-common
     PORT: "8000"
     NODE_ENV: production
     TRUST_PROXY: "false"
-    UPDATE_CHECK_OUTBOUND: "false"
     CSRF_SECRET: lab-csrf-secret-32-chars-minimum-value
     BACKUP_SCHEDULE: "*/30 * * * *"
     BACKUP_DIR: /app/backups
