@@ -13,6 +13,30 @@ if (
 const buildLabel =
   process.env.VITE_APP_BUILD_LABEL?.trim() || "local development build";
 
+const readBasePath = () => {
+  const basePath = process.env.EXCALIDASH_BASE_PATH?.trim() || "/";
+  if (basePath === "/") return basePath;
+
+  const segments = basePath.slice(1, -1).split("/");
+  const validSegment = /^[A-Za-z0-9._~-]+$/;
+  if (
+    !basePath.startsWith("/") ||
+    !basePath.endsWith("/") ||
+    segments.some(
+      (segment) =>
+        !segment ||
+        segment === "." ||
+        segment === ".." ||
+        !validSegment.test(segment),
+    )
+  ) {
+    throw new Error(
+      `Invalid EXCALIDASH_BASE_PATH: ${JSON.stringify(basePath)} (expected an absolute path ending with /)`,
+    );
+  }
+  return basePath;
+};
+
 export default defineConfig(({ command }) => {
   const nodeEnv =
     process.env.NODE_ENV ||
@@ -26,6 +50,7 @@ export default defineConfig(({ command }) => {
 
   return {
     plugins: [react()],
+    base: readBasePath(),
     define: {
       ...processEnvDefines,
       "import.meta.env.VITE_APP_VERSION": JSON.stringify(appVersion),

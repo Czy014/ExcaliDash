@@ -19,7 +19,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
     if (link) {
-      link.href = theme === "dark" ? "/favicon-dark.svg" : "/favicon-light.svg";
+      link.href = `${import.meta.env.BASE_URL}favicon-${theme === "dark" ? "dark" : "light"}.svg`;
     }
 
     if (theme === "dark") {

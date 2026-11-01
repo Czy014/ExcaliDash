@@ -73,9 +73,11 @@ services:
       - API_URL=http://backend:8000
       - NO_SERVER=true
       - CI=true
+      - CSP_TEMPLATE_PATH=/app/frontend/nginx.conf.template
     volumes:
       - ./test-results:/app/test-results
       - ./playwright-report:/app/playwright-report
+      - ../frontend/nginx.conf.template:/app/frontend/nginx.conf.template:ro
     networks:
       - e2e-network
 

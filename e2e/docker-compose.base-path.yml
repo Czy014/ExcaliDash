@@ -1,0 +1,43 @@
+services:
+  backend:
+    environment:
+      FRONTEND_URL: http://proxy:8080
+
+  frontend:
+    build:
+      args:
+        EXCALIDASH_BASE_PATH: /draw/
+
+  playwright:
+    command:
+      [
+        "npx",
+        "playwright",
+        "test",
+        "tests/base-path.spec.ts",
+        "--reporter=list",
+      ]
+    depends_on:
+      proxy:
+        condition: service_healthy
+    environment:
+      BASE_URL: http://proxy:8080/draw/
+
+  proxy:
+    image: nginx:1.30.6-alpine
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    volumes:
+      - ./fixtures/base-path-proxy.conf:/etc/nginx/nginx.conf:ro
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/draw/"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - e2e-network

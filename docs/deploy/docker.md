@@ -46,6 +46,21 @@ Create a drawing, make an edit, then close and reopen it to check storage. To ch
 
 Build both images from the same reviewed fork commit. Record that commit with the deployed image tags so the matching LGPLv3 source remains available. Published upstream images do not provide this fork's single-user behavior.
 
+## Serve the frontend under a path
+
+The frontend uses `/` by default. For a gateway prefix, pass a build-time
+`EXCALIDASH_BASE_PATH` ending in `/`:
+
+```bash
+docker build -f frontend/Dockerfile \
+  --build-arg EXCALIDASH_BASE_PATH=/draw/ \
+  -t excalidash-frontend:draw .
+```
+
+Configure the reverse proxy to strip `/draw/` before forwarding to the
+frontend container. Keep the backend API at the origin root (`/api/`); the
+frontend does not move or rewrite API URLs.
+
 ## Configure HTTPS
 
 Route HTTPS traffic to container port `80` or `8080`, or host port `6767`. Both container ports serve the same application. Existing `6767:80` mappings and reverse proxies targeting port `80` remain supported. The frontend proxies HTTP API traffic to the backend.
