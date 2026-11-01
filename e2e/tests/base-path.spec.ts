@@ -67,11 +67,14 @@ const isEngineSubsetScript = (value: string) => {
   }
 };
 
-const isEngineSubsettingLog = (text: string, sourceFile: string) =>
+const isEngineWorkerFallbackLog = (text: string, sourceFile: string) =>
   isEngineAssetScript(sourceFile) &&
-  (text ===
-    "Failed to use workers for subsetting, falling back to the main thread. ErrorEvent" ||
-    text.startsWith("Skipped glyph subsetting EvalError:"));
+  text ===
+    "Failed to use workers for subsetting, falling back to the main thread. ErrorEvent";
+
+const isEngineSkippedSubsettingLog = (text: string, sourceFile: string) =>
+  isEngineSubsetScript(sourceFile) &&
+  text.startsWith("Skipped glyph subsetting EvalError:");
 
 // Playwright's response interception makes Chromium treat Docker service DNS
 // names as cross-origin private-network requests. This flag keeps that browser
@@ -318,8 +321,10 @@ test.describe("native base path", () => {
         text.startsWith("Skipped glyph subsetting EvalError:") &&
         isEngineSubsetScript(sourceFile),
     );
-    const allowedEngineLogs = consoleErrors.filter(({ text, sourceFile }) =>
-      isEngineSubsettingLog(text, sourceFile),
+    const allowedEngineLogs = consoleErrors.filter(
+      ({ text, sourceFile }) =>
+        isEngineWorkerFallbackLog(text, sourceFile) ||
+        (Boolean(csp) && isEngineSkippedSubsettingLog(text, sourceFile)),
     );
     for (const violation of cspViolations) {
       const { effectiveDirective, blockedURI, sourceFile } = violation;
@@ -345,10 +350,10 @@ test.describe("native base path", () => {
     expect(
       consoleErrors.filter(
         (error) =>
-          !csp ||
           !(
             allowedEngineLogs.includes(error) ||
-            (error.text.includes("font-src") &&
+            (csp &&
+              error.text.includes("font-src") &&
               cdnFontRequests.some((cdnRequest) =>
                 error.text.includes(cdnRequest.url()),
               ))
