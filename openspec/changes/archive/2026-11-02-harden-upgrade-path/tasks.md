@@ -40,7 +40,7 @@ repository root unless they start with `cd`.
 
 - [x] 3.1 Record the results below, synchronize the specification and archive
       this change only after section 2 passes.
-- [ ] 3.2 Commit and push `chore/upgrade-path`. Merge into `main` only when
+- [x] 3.2 Commit and push `chore/upgrade-path`. Merge into `main` only when
       explicitly instructed.
 
 ## Validation
@@ -110,6 +110,12 @@ repository root unless they start with `cd`.
 - Archived as `2026-11-02-harden-upgrade-path`. The added requirement in
   `single-user-runtime` matches the change specification verbatim. After
   archive, all five main specifications passed strict validation.
+
+### Publication
+
+- Implementation, original proposal/design, synchronized specification and
+  archive were committed and pushed on `chore/upgrade-path` as `db0f9ba`.
+- `main` remains at `6418f6f`; neither implementation branch was merged.
 
 ### Not verified
 
