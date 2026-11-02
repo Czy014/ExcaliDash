@@ -8,7 +8,9 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++ openssl
 
 COPY backend/package*.json ./
-RUN npm ci && npm cache clean --force
+RUN npm install --global npm@10.9.2
+COPY --chmod=0555 backend/scripts/verify-prisma-engines.sh ./scripts/verify-prisma-engines.sh
+RUN npm ci && ./scripts/verify-prisma-engines.sh && npm cache clean --force
 
 # Build stage
 FROM dependencies AS builder

@@ -69,7 +69,13 @@ export default defineConfig({
       },
       {
         text: "Develop",
-        items: [{ text: "Local development", link: "/develop/" }],
+        items: [
+          { text: "Local development", link: "/develop/" },
+          {
+            text: "Upgrading Excalidraw",
+            link: "/develop/upgrading-excalidraw",
+          },
+        ],
       },
       {
         text: "Reference",
